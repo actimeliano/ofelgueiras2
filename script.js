@@ -15,6 +15,266 @@
 // Debug mode - set to false in production to disable debugLog
 const DEBUG_MODE = false;
 
+// ============================================================
+// THEME MANAGEMENT (Dark Mode)
+// ============================================================
+
+/**
+ * Initialize theme based on localStorage or system preference
+ */
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    } else if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+}
+
+/**
+ * Toggle between light and dark theme
+ */
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Add animation class
+    document.body.classList.add('theme-transition');
+    setTimeout(() => {
+        document.body.classList.remove('theme-transition');
+    }, 300);
+    
+    debugLog(`Theme changed to: ${newTheme}`);
+}
+
+// Initialize theme immediately to prevent flash
+initTheme();
+
+// ============================================================
+// SERVICE WORKER REGISTRATION
+// ============================================================
+
+/**
+ * Register Service Worker for offline support
+ */
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                debugLog('Service Worker registered:', registration.scope);
+                
+                // Check for updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New content available
+                            debugLog('New content available, refresh for update');
+                        }
+                    });
+                });
+            } catch (error) {
+                debugLog('Service Worker registration failed:', error);
+            }
+        });
+    }
+}
+
+// Register service worker
+registerServiceWorker();
+
+// ============================================================
+// LAZY LOADING FOR LARGE CSV
+// ============================================================
+
+/**
+ * Load the large CSV file on demand (when date range is used)
+ * @returns {Promise<boolean>} True if loaded successfully
+ */
+async function carregarCSVGrandeSeNecessario() {
+    // Already loaded or currently loading
+    if (dadosCSV_grande.length > 0 || csvGrandeCarregando) {
+        return true;
+    }
+    
+    csvGrandeCarregando = true;
+    debugLog('📦 Loading large CSV on demand...');
+    
+    try {
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('dataFreshnessIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.textContent = '⏳ A carregar dados históricos...';
+            loadingIndicator.style.display = 'block';
+        }
+        
+        dadosCSV_grande = await carregarCSV(urlCSV_grande);
+        adiarGrandes = false;
+        
+        debugLog('✅ Large CSV loaded successfully');
+        
+        // Update indicator
+        if (loadingIndicator) {
+            loadingIndicator.textContent = '✓ Dados históricos carregados';
+            setTimeout(() => {
+                loadingIndicator.style.display = 'none';
+            }, 2000);
+        }
+        
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to load large CSV:', error);
+        csvGrandeCarregando = false;
+        return false;
+    } finally {
+        csvGrandeCarregando = false;
+    }
+}
+
+// ============================================================
+// INPUT VALIDATION UTILITIES
+// ============================================================
+
+/**
+ * Validates a numeric input value
+ * @param {string} value - The input value
+ * @param {Object} options - Validation options
+ * @returns {Object} { valid: boolean, value: number|null, error: string|null }
+ */
+function validateNumericInput(value, options = {}) {
+    const {
+        min = -Infinity,
+        max = Infinity,
+        allowEmpty = true,
+        allowNegative = true,
+        allowDecimal = true,
+        maxDecimals = 10
+    } = options;
+    
+    // Trim and normalize
+    const trimmed = String(value).trim().replace(',', '.');
+    
+    // Allow empty if specified
+    if (trimmed === '' && allowEmpty) {
+        return { valid: true, value: null, error: null };
+    }
+    
+    // Check if it's a valid number
+    const num = parseFloat(trimmed);
+    
+    if (isNaN(num)) {
+        return { valid: false, value: null, error: 'Valor inválido' };
+    }
+    
+    // Check negative
+    if (!allowNegative && num < 0) {
+        return { valid: false, value: null, error: 'Valor não pode ser negativo' };
+    }
+    
+    // Check decimal
+    if (!allowDecimal && !Number.isInteger(num)) {
+        return { valid: false, value: null, error: 'Valor deve ser inteiro' };
+    }
+    
+    // Check decimal places
+    const parts = trimmed.split('.');
+    if (parts.length > 1 && parts[1].length > maxDecimals) {
+        return { valid: false, value: null, error: `Máximo ${maxDecimals} casas decimais` };
+    }
+    
+    // Check range
+    if (num < min) {
+        return { valid: false, value: null, error: `Valor mínimo: ${min}` };
+    }
+    
+    if (num > max) {
+        return { valid: false, value: null, error: `Valor máximo: ${max}` };
+    }
+    
+    return { valid: true, value: num, error: null };
+}
+
+/**
+ * Validates a date input value
+ * @param {string} value - The date string (YYYY-MM-DD)
+ * @param {Object} options - Validation options
+ * @returns {Object} { valid: boolean, value: Date|null, error: string|null }
+ */
+function validateDateInput(value, options = {}) {
+    const {
+        minDate = null,
+        maxDate = null,
+        allowEmpty = true
+    } = options;
+    
+    const trimmed = String(value).trim();
+    
+    if (trimmed === '' && allowEmpty) {
+        return { valid: true, value: null, error: null };
+    }
+    
+    // Parse date
+    const date = new Date(trimmed);
+    
+    if (isNaN(date.getTime())) {
+        return { valid: false, value: null, error: 'Data inválida' };
+    }
+    
+    // Check min date
+    if (minDate && date < new Date(minDate)) {
+        return { valid: false, value: null, error: `Data mínima: ${minDate}` };
+    }
+    
+    // Check max date
+    if (maxDate && date > new Date(maxDate)) {
+        return { valid: false, value: null, error: `Data máxima: ${maxDate}` };
+    }
+    
+    return { valid: true, value: date, error: null };
+}
+
+/**
+ * Shows validation error on an input element
+ * @param {HTMLElement} input - The input element
+ * @param {string} message - Error message
+ */
+function showInputError(input, message) {
+    input.classList.add('input-error');
+    input.setAttribute('aria-invalid', 'true');
+    
+    // Create or update error message
+    let errorEl = input.parentElement.querySelector('.input-error-message');
+    if (!errorEl) {
+        errorEl = document.createElement('span');
+        errorEl.className = 'input-error-message';
+        errorEl.setAttribute('role', 'alert');
+        input.parentElement.appendChild(errorEl);
+    }
+    errorEl.textContent = message;
+}
+
+/**
+ * Clears validation error from an input element
+ * @param {HTMLElement} input - The input element
+ */
+function clearInputError(input) {
+    input.classList.remove('input-error');
+    input.removeAttribute('aria-invalid');
+    
+    const errorEl = input.parentElement.querySelector('.input-error-message');
+    if (errorEl) {
+        errorEl.remove();
+    }
+}
+
 // Dynamic year configuration
 const CURRENT_YEAR = new Date().getFullYear();
 const DATA_YEAR = CURRENT_YEAR; // Year for date constraints
@@ -87,7 +347,8 @@ const tabelasGrandes = {
     TPT: { inicio: "D2", fim: "D35041" }
 };
 
-let adiarGrandes = false;
+let adiarGrandes = true; // Start with lazy loading - only load when needed
+let csvGrandeCarregando = false; // Prevent multiple simultaneous loads
 
 const variaveis = {
     perdas2024: "AC18",
@@ -2199,6 +2460,21 @@ function revealPostTableContent() {
 // 6) Toda inicialização em um só lugar
 document.addEventListener("DOMContentLoaded", async () => {
   // ============================================================
+  // THEME TOGGLE SETUP
+  // ============================================================
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+  
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('theme')) {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    }
+  });
+  
+  // ============================================================
   // DYNAMIC YEAR INITIALIZATION
   // ============================================================
   
@@ -2598,18 +2874,30 @@ debugLog("secaoDef:", secaoDef);
 
   // 7) Dates → DataS + resultados
   // Função de callback comum para startDate
-  function onStartDateChange() {
+  async function onStartDateChange() {
       // ajustar min do endDate
       endDate.min = startDate.value || DATE_MIN;
       atualizarEstadoDatas();
+      
+      // Load large CSV if date range is being used
+      if (DataS && dadosCSV_grande.length === 0) {
+          await carregarCSVGrandeSeNecessario();
+      }
+      
       atualizarResultados();
   }
 
   // Função de callback comum para endDate
-  function onEndDateChange() {
+  async function onEndDateChange() {
       // ajustar max do startDate
       startDate.max = endDate.value || DATE_MAX;
       atualizarEstadoDatas();
+      
+      // Load large CSV if date range is being used
+      if (DataS && dadosCSV_grande.length === 0) {
+          await carregarCSVGrandeSeNecessario();
+      }
+      
       atualizarResultados();
   }
 
@@ -2688,11 +2976,8 @@ debugLog("secaoDef:", secaoDef);
   document.getElementById("abaOutrasOpcoes")
       .addEventListener("click", () => alternarAba("OutrasOpcoes"));
   
-  setTimeout(async () => {
-      dadosCSV_grande = await carregarCSV(urlCSV_grande);
-      adiarGrandes = false;
-      debugLog("✅ CSV grande carregado em background");
-  }, 1000); // Aguarda 1 segundo para não interferir com o carregamento inicial
+  // Large CSV is now loaded on demand when date range is used
+  debugLog("📋 Large CSV will be loaded on demand when needed");
 
   tippy.delegate(document.body, {
     theme: 'light-border',
