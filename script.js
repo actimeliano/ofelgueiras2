@@ -1449,7 +1449,7 @@ if (!isNaN(omieParseado)) {
             // Apenas para “EDP indexado” criamos a tooltipText e a classe
             let cellAttrs = ' class="internop"';
             if ((tarifa.nome === "EDP indexado" || tarifa.nome.startsWith("EDP: Eletricidade Indexada")) && incluirEDP && potenciaNum >=3.45) {
-                const descontoMsg = "Valor apresentado inclui desconto mensal de 10€ válido nos primeiros 10 meses, para adesões até 30/9/2025";
+                const descontoMsg = "Valor apresentado inclui desconto mensal de 10€ válido nos primeiros 10 meses, para adesões até 30/9/2026";
                 const tooltipText = descontoMsg;
                 cellAttrs = ` class="internop has-tooltip mais-indicator" data-tippy-content="${tooltipText}"`;        
             }
@@ -2355,10 +2355,10 @@ wrappers.forEach(wrapper => {
       document.getElementById("omieInput").value = "";
       startDate.value = endDate.value = "";
       // 2) Restaura os limites originais
-      startDate.min = "2025-01-01";
-      startDate.max = "2025-12-31";
-      endDate.min = "2025-01-01";
-      endDate.max = "2025-12-31";
+      startDate.min = "2026-01-01";
+      startDate.max = "2026-12-31";
+      endDate.min = "2026-01-01";
+      endDate.max = "2026-12-31";
       resetDescontosSociais();
       atualizarEstadoDatas();
       atualizarResultados();
@@ -2370,10 +2370,10 @@ wrappers.forEach(wrapper => {
   btnClearDates.addEventListener("click", () => {
       startDate.value = endDate.value = "";
       // 2) Restaura os limites originais
-      startDate.min = "2025-01-01";
-      startDate.max = "2025-12-31";
-      endDate.min = "2025-01-01";
-      endDate.max = "2025-12-31";
+      startDate.min = "2026-01-01";
+      startDate.max = "2026-12-31";
+      endDate.min = "2026-01-01";
+      endDate.max = "2026-12-31";
       atualizarEstadoDatas();
       atualizarResultados();
   });
@@ -2437,7 +2437,7 @@ console.log("secaoDef:", secaoDef);
   // Função de callback comum para startDate
   function onStartDateChange() {
       // ajustar min do endDate
-      endDate.min = startDate.value || "2025-01-01";
+      endDate.min = startDate.value || "2026-01-01";
       atualizarEstadoDatas();
       atualizarResultados();
   }
@@ -2445,7 +2445,7 @@ console.log("secaoDef:", secaoDef);
   // Função de callback comum para endDate
   function onEndDateChange() {
       // ajustar max do startDate
-      startDate.max = endDate.value || "2025-12-31";
+      startDate.max = endDate.value || "2026-12-31";
       atualizarEstadoDatas();
       atualizarResultados();
   }
