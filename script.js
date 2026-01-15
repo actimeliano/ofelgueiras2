@@ -295,6 +295,136 @@ function debugLog(...args) {
 }
 
 // ============================================================
+// COMPARISON HISTORY (localStorage)
+// ============================================================
+
+const HISTORY_KEY = 'comparador_history';
+const MAX_HISTORY_ITEMS = 10;
+
+/**
+ * Save a comparison to history
+ * @param {Object} comparison - The comparison data to save
+ */
+function saveToHistory(comparison) {
+    try {
+        const history = getHistory();
+        const entry = {
+            ...comparison,
+            timestamp: new Date().toISOString(),
+            id: Date.now()
+        };
+        
+        // Add to beginning of array
+        history.unshift(entry);
+        
+        // Keep only the last N items
+        const trimmedHistory = history.slice(0, MAX_HISTORY_ITEMS);
+        
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmedHistory));
+        debugLog('📜 Comparison saved to history:', entry);
+        
+        return entry;
+    } catch (error) {
+        debugLog('❌ Failed to save to history:', error);
+        return null;
+    }
+}
+
+/**
+ * Get comparison history from localStorage
+ * @returns {Array} Array of past comparisons
+ */
+function getHistory() {
+    try {
+        const stored = localStorage.getItem(HISTORY_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        debugLog('❌ Failed to read history:', error);
+        return [];
+    }
+}
+
+/**
+ * Clear comparison history
+ */
+function clearHistory() {
+    try {
+        localStorage.removeItem(HISTORY_KEY);
+        debugLog('🗑️ History cleared');
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to clear history:', error);
+        return false;
+    }
+}
+
+/**
+ * Create a comparison snapshot for history
+ * @returns {Object} Current comparison parameters
+ */
+function createComparisonSnapshot() {
+    const consumoInput = document.getElementById('consumoInput');
+    const potenciaSelect = document.getElementById('potenciac');
+    const mesSelecionado = document.getElementById('mesSelecionado');
+    const diasInput = document.getElementById('dias');
+    const omieInput = document.getElementById('omieInput');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    return {
+        consumo: consumoInput ? consumoInput.value : '',
+        potencia: potenciaSelect ? potenciaSelect.value : '',
+        mes: mesSelecionado ? mesSelecionado.selectedOptions[0]?.text : '',
+        mesIndex: mesSelecionado ? mesSelecionado.value : '',
+        dias: diasInput ? diasInput.value : '',
+        omie: omieInput ? omieInput.value : '',
+        dateRange: (startDate?.value && endDate?.value) ? {
+            start: startDate.value,
+            end: endDate.value
+        } : null
+    };
+}
+
+/**
+ * Restore a comparison from history
+ * @param {Object} snapshot - The snapshot to restore
+ */
+function restoreFromHistory(snapshot) {
+    try {
+        const consumoInput = document.getElementById('consumoInput');
+        const potenciaSelect = document.getElementById('potenciac');
+        const mesSelecionado = document.getElementById('mesSelecionado');
+        const diasInput = document.getElementById('dias');
+        const omieInput = document.getElementById('omieInput');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        
+        if (consumoInput && snapshot.consumo) consumoInput.value = snapshot.consumo;
+        if (potenciaSelect && snapshot.potencia) potenciaSelect.value = snapshot.potencia;
+        if (mesSelecionado && snapshot.mesIndex) mesSelecionado.value = snapshot.mesIndex;
+        if (diasInput && snapshot.dias) diasInput.value = snapshot.dias;
+        if (omieInput && snapshot.omie) omieInput.value = snapshot.omie;
+        
+        if (snapshot.dateRange) {
+            if (startDate) startDate.value = snapshot.dateRange.start;
+            if (endDate) endDate.value = snapshot.dateRange.end;
+        }
+        
+        debugLog('📜 Restored comparison from history:', snapshot);
+        
+        // Trigger recalculation
+        if (typeof atualizarResultados === 'function') {
+            atualizarResultados();
+        }
+        
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to restore from history:', error);
+        return false;
+    }
+}
+
+// ============================================================
 // CSV PATHS AND DATA
 // ============================================================
 
@@ -815,28 +945,8 @@ function preencherSelecaoMeses() {
 }
 
 function atualizarResultados() {
-    // dentro de atualizarResultados(), logo no topo:
-const omieInputCampo = document.getElementById("omieInput");
-let omieRaw = omieInputCampo.value.replace(",", ".").trim();
-let omieNum = parseFloat(omieRaw);
-
-// Se for vazio ou inválido, considere zero (ou outro fallback)
-if (isNaN(omieNum)) {
-  omieNum = 0;
-}
-
-// Converta de €/kWh para €/kWh (ou de €/MWh para €/kWh, conforme o que precisar)
-// Exemplo: se o input estiver a ser preenchido em €/MWh e quiser dividir por 1000:
-OMIESSelecionadoS = Number((omieNum / 1000).toFixed(5));
-
-// Se o seu input já está em €/kWh, basta usar:
- // OMIESSelecionadoS = omieNum; 
-
-debugLog("└─ OMIESSelecionadoS (no início de atualizarResultados):", OMIESSelecionadoS);
-
-
-
-
+    // Note: OMIESSelecionadoS is calculated later based on DataS (date range) or manual input
+    // See lines ~1039-1075 for DataS-based calculation and ~1193-1196 for manual override
 
 
     // dentro de atualizarResultados():
@@ -858,7 +968,7 @@ if (rawConsumo === "") {
     debugLog("📌 Potência selecionada:",potenciaSelecionada);
 
     if (isNaN(consumo)) consumo = 0;
-    if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
+    // Note: potenciaSelecionada is always defined from line 856, no fallback needed
     let mostrarNomesAlternativos = document.getElementById("mostrarNomes").checked;
     let incluirACP = document.getElementById("incluirACP").checked;
     let incluirContinente = document.getElementById("incluirContinente").checked;
@@ -2241,6 +2351,17 @@ const invoiceTooltip = `
 
 
         document.getElementById("resultado").innerHTML = tabelaResultados;
+        
+        // Save comparison to history (only if there are results)
+        if (tarifarios && tarifarios.length > 0) {
+            const snapshot = createComparisonSnapshot();
+            snapshot.topResult = tarifarios[0] ? {
+                nome: tarifarios[0].nome,
+                custo: tarifarios[0].custo
+            } : null;
+            saveToHistory(snapshot);
+        }
+        
         // Agora que a tabela foi desenhada, o botão já existe — associar o evento!
         document.getElementById("btnEsquema")?.addEventListener("click", () => {
           // 1) avança esquema
@@ -2471,6 +2592,47 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     if (!localStorage.getItem('theme')) {
       document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    }
+  });
+  
+  // ============================================================
+  // KEYBOARD SHORTCUTS
+  // ============================================================
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+Enter or Cmd+Enter to recalculate
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (typeof atualizarResultados === 'function') {
+        atualizarResultados();
+        debugLog('🔄 Recalculated via keyboard shortcut (Ctrl+Enter)');
+      }
+    }
+    
+    // Escape to close settings panel
+    if (e.key === 'Escape') {
+      const secaoDefinicoes = document.getElementById('secaoDefinicoes');
+      if (secaoDefinicoes && secaoDefinicoes.style.display !== 'none') {
+        secaoDefinicoes.style.display = 'none';
+        const btnDef = document.getElementById('btnDefinicoes');
+        if (btnDef) {
+          const arrowUse = btnDef.querySelector('use');
+          if (arrowUse) arrowUse.setAttribute('href', 'icons.svg#chevron-down-logo');
+        }
+      }
+    }
+    
+    // D key to toggle dark mode (when not in input)
+    if (e.key === 'd' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const activeEl = document.activeElement;
+      const isInInput = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.tagName === 'SELECT'
+      );
+      if (!isInInput) {
+        toggleTheme();
+        debugLog('🌙 Theme toggled via keyboard shortcut (D)');
+      }
     }
   });
   

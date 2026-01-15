@@ -33,7 +33,7 @@ function debugLog(...args) {
 
 ---
 
-### 2. Bug: Reatribuição de `const` implícita
+### 2. ✅ Bug: Reatribuição de `const` implícita (CORRIGIDO)
 **Ficheiro:** `script.js` (linha 554)
 **Gravidade:** Média
 
@@ -42,6 +42,8 @@ if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
 ```
 
 **Problema:** `potenciaSelecionada` é declarada como `const` algumas linhas antes, portanto esta atribuição nunca seria alcançada de qualquer forma mas gera confusão.
+
+**Correção:** Linha removida, adicionado comentário explicativo.
 
 ---
 
@@ -82,11 +84,13 @@ if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
 
 ---
 
-### 6. Bug: Variável `OMIESSelecionadoS` sobrescrita desnecessariamente
+### 6. ✅ Bug: Variável `OMIESSelecionadoS` sobrescrita desnecessariamente (CORRIGIDO)
 **Ficheiro:** `script.js` (linhas 520-528 e 876-889)
 **Gravidade:** Baixa
 
 A variável é calculada no início de `atualizarResultados()` e depois sobrescrita novamente no final com o mesmo cálculo.
+
+**Correção:** Removido cálculo redundante no início da função, mantido apenas o cálculo baseado em `DataS` e manual input.
 
 ---
 
@@ -416,9 +420,10 @@ const i18n = {
 
 ### Baixa Prioridade (Roadmap Futuro)
 1. ✅ PWA completa (manifest + service worker)
-2. Multi-idioma
-3. Widget incorporável
-4. Integração com fatura digital
+2. ✅ Content Security Policy
+3. Multi-idioma
+4. Widget incorporável
+5. Integração com fatura digital
 
 ---
 
@@ -470,6 +475,20 @@ const i18n = {
   - Sombras e transições suaves
   - Melhor hierarquia visual
   - Animações e micro-interações
+
+### Commit 3: Bug fixes e UX Improvements
+- ✅ **Bug #2 Corrigido**: Removida linha redundante de reatribuição de `const potenciaSelecionada`
+- ✅ **Bug #6 Corrigido**: Removido cálculo duplicado de `OMIESSelecionadoS` no início de `atualizarResultados()`
+- ✅ **Content Security Policy**: Adicionada meta tag CSP para proteção XSS
+- ✅ **Atalhos de Teclado**:
+  - `Ctrl+Enter` / `Cmd+Enter` para recalcular
+  - `Escape` para fechar painel de definições
+  - `D` para alternar tema claro/escuro (quando não em input)
+- ✅ **Histórico de Comparações**:
+  - Sistema completo de histórico em localStorage
+  - Guarda últimas 10 comparações
+  - Funções: `saveToHistory()`, `getHistory()`, `clearHistory()`, `restoreFromHistory()`
+  - Snapshot inclui: consumo, potência, mês, dias, OMIE, intervalo de datas
 
 ---
 
