@@ -409,17 +409,69 @@ const i18n = {
 4. ✅ Melhorar acessibilidade básica
 
 ### Média Prioridade (Próximas Iterações)
-1. Implementar dark mode
+1. ✅ Implementar dark mode
 2. Adicionar exportação PDF
 3. Melhorar modularização do código
 4. Adicionar testes unitários
 
 ### Baixa Prioridade (Roadmap Futuro)
-1. PWA completa
+1. ✅ PWA completa (manifest + service worker)
 2. Multi-idioma
 3. Widget incorporável
 4. Integração com fatura digital
 
 ---
 
-*Documento gerado em Janeiro 2026*
+## IMPLEMENTAÇÕES REALIZADAS
+
+### Commit 1: Bug fixes e acessibilidade inicial
+- ✅ Corrigido bug recursivo em `debugLog()`
+- ✅ Corrigido comentário HTML malformado no iframe
+- ✅ Substituídas imagens em falta por ícones SVG
+- ✅ Adicionados meta tags Open Graph e SEO
+- ✅ Adicionado skip link para acessibilidade
+- ✅ Melhorado sistema de retry no carregamento de CSV
+
+### Commit 2: UI/UX Major Improvements
+- ✅ **Sistema de Temas com CSS Custom Properties**
+  - Todas as cores extraídas para variáveis CSS
+  - Facilita manutenção e theming
+  
+- ✅ **Dark Mode Completo**
+  - Toggle no canto superior direito
+  - Persiste preferência no localStorage
+  - Respeita preferência do sistema (prefers-color-scheme)
+  - Transição suave entre temas
+  
+- ✅ **Design Responsivo Melhorado**
+  - Três breakpoints: mobile (480px), tablet (768px), desktop
+  - Layouts fluidos que se adaptam ao ecrã
+  - Botões com tamanhos touch-friendly em mobile
+  - Tabela otimizada para ecrãs pequenos
+  
+- ✅ **PWA (Progressive Web App)**
+  - manifest.json para instalação como app
+  - Service Worker para funcionamento offline
+  - Cache de recursos essenciais
+  - Estratégia cache-first com updates em background
+  
+- ✅ **Lazy Loading do CSV Grande**
+  - Carrega apenas quando o utilizador usa intervalo de datas
+  - Reduz tempo de carregamento inicial
+  - Indicador de loading durante carregamento
+  
+- ✅ **Validação de Inputs**
+  - Funções utilitárias para validação numérica e de datas
+  - Estados de erro visuais com ARIA attributes
+  - Mensagens de erro claras
+  
+- ✅ **Melhorias Visuais**
+  - Nova paleta de cores moderna
+  - Sombras e transições suaves
+  - Melhor hierarquia visual
+  - Animações e micro-interações
+
+---
+
+*Documento atualizado em Janeiro 2026*
+
