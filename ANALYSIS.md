@@ -33,7 +33,7 @@ function debugLog(...args) {
 
 ---
 
-### 2. Bug: Reatribuição de `const` implícita
+### 2. ✅ Bug: Reatribuição de `const` implícita (CORRIGIDO)
 **Ficheiro:** `script.js` (linha 554)
 **Gravidade:** Média
 
@@ -42,6 +42,8 @@ if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
 ```
 
 **Problema:** `potenciaSelecionada` é declarada como `const` algumas linhas antes, portanto esta atribuição nunca seria alcançada de qualquer forma mas gera confusão.
+
+**Correção:** Linha removida, adicionado comentário explicativo.
 
 ---
 
@@ -82,11 +84,13 @@ if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
 
 ---
 
-### 6. Bug: Variável `OMIESSelecionadoS` sobrescrita desnecessariamente
+### 6. ✅ Bug: Variável `OMIESSelecionadoS` sobrescrita desnecessariamente (CORRIGIDO)
 **Ficheiro:** `script.js` (linhas 520-528 e 876-889)
 **Gravidade:** Baixa
 
 A variável é calculada no início de `atualizarResultados()` e depois sobrescrita novamente no final com o mesmo cálculo.
+
+**Correção:** Removido cálculo redundante no início da função, mantido apenas o cálculo baseado em `DataS` e manual input.
 
 ---
 
@@ -262,19 +266,10 @@ async function exportarPDF() {
 
 ---
 
-### 5. Guardar Preferências/Perfis
+### 5. ✅ Guardar Preferências/Perfis (IMPLEMENTADO)
 **Benefício:** Utilizadores podem guardar configurações frequentes.
 
-```javascript
-function guardarPerfil(nome) {
-    const perfil = {
-        potencia: document.getElementById('potenciac').value,
-        consumo: document.getElementById('consumoInput').value,
-        // ...
-    };
-    localStorage.setItem(`perfil_${nome}`, JSON.stringify(perfil));
-}
-```
+**Implementação completa** com sistema de até 5 perfis, interface de gestão e restauro automático.
 
 ---
 
@@ -283,21 +278,17 @@ function guardarPerfil(nome) {
 
 ---
 
-### 7. Calculadora de Poupança Anual
+### 7. ✅ Calculadora de Poupança Anual (IMPLEMENTADO)
 **Benefício:** Mostrar potencial poupança se trocar de tarifário.
 
-```javascript
-function calcularPoupancaAnual(tarifaAtual, tarifaNova, consumoMensal) {
-    const custoAtual = tarifaAtual.custo * 12;
-    const custoNovo = tarifaNova.custo * 12;
-    return custoAtual - custoNovo;
-}
-```
+**Implementação completa** com cálculo de poupança anual/mensal, integração com "Meu Tarifário" e display dinâmico nos resultados.
 
 ---
 
-### 8. Integração com Fatura Digital
+### 8. ✅ Integração com Fatura Digital (IMPLEMENTADO)
 **Benefício:** Permitir upload de fatura para preenchimento automático de consumo.
+
+**Implementação completa** com upload drag-and-drop, processamento via Gemini Flash API, extração de dados e preenchimento automático.
 
 ---
 
@@ -416,9 +407,10 @@ const i18n = {
 
 ### Baixa Prioridade (Roadmap Futuro)
 1. ✅ PWA completa (manifest + service worker)
-2. Multi-idioma
-3. Widget incorporável
-4. Integração com fatura digital
+2. ✅ Content Security Policy
+3. Multi-idioma
+4. Widget incorporável
+5. Integração com fatura digital
 
 ---
 
@@ -470,6 +462,74 @@ const i18n = {
   - Sombras e transições suaves
   - Melhor hierarquia visual
   - Animações e micro-interações
+
+### Commit 3: Bug fixes e UX Improvements
+- ✅ **Bug #2 Corrigido**: Removida linha redundante de reatribuição de `const potenciaSelecionada`
+- ✅ **Bug #6 Corrigido**: Removido cálculo duplicado de `OMIESSelecionadoS` no início de `atualizarResultados()`
+- ✅ **Content Security Policy**: Adicionada meta tag CSP para proteção XSS
+- ✅ **Atalhos de Teclado**:
+  - `Ctrl+Enter` / `Cmd+Enter` para recalcular
+  - `Escape` para fechar painel de definições
+  - `D` para alternar tema claro/escuro (quando não em input)
+- ✅ **Histórico de Comparações**:
+  - Sistema completo de histórico em localStorage
+  - Guarda últimas 10 comparações
+  - Funções: `saveToHistory()`, `getHistory()`, `clearHistory()`, `restoreFromHistory()`
+  - Snapshot inclui: consumo, potência, mês, dias, OMIE, intervalo de datas
+
+### Commit 4: User Profiles, Savings Calculator & Invoice Infrastructure
+- ✅ **Sistema de Perfis de Utilizador**:
+  - Guardar até 5 perfis com configurações personalizadas
+  - Cada perfil guarda: consumo, potência, opções selecionadas, meu tarifário
+  - Funções: `saveProfile()`, `loadProfile()`, `deleteProfile()`, `getProfiles()`
+  - Interface com lista de perfis na nova aba "Perfis"
+  - Carregar/apagar perfis com um clique
+  
+- ✅ **Calculadora de Poupança Anual**:
+  - Calcula poupança comparando tarifário atual vs melhor opção
+  - Exibe poupança mensal e anual em euros e percentagem
+  - Integrado com "Meu Tarifário" para comparação automática
+  - Funções: `calculateAnnualSavings()`, `calculateSavingsFromCurrentTariff()`, `formatSavingsDisplay()`
+  - Display dinâmico após resultados
+  
+- ✅ **Infraestrutura para Upload de Fatura (Gemini Flash API)**:
+  - Nova aba "Fatura" no painel de definições
+  - Interface drag-and-drop para upload de imagens/PDFs
+  - Integração com Google Gemini 2.0 Flash para extração de dados
+  - Extração automática de: comercializador, consumo, potência, preços, período
+  - Preenchimento automático do formulário com dados extraídos
+  - Configuração de API key pelo utilizador (sessão apenas)
+  - Funções: `extractInvoiceData()`, `applyInvoiceData()`, `initInvoiceUpload()`
+  - Prompt otimizado para faturas portuguesas
+  
+- ✅ **Novas Abas no Painel de Definições**:
+  - "👤 Perfis" - Gestão de perfis de utilizador
+  - "📄 Fatura" - Upload e processamento de faturas
+  
+- ✅ **CSS Adicional**:
+  - Estilos para profiles-container, profile-item
+  - Estilos para savings-display (positivo/negativo)
+  - Estilos para invoice-upload (dropzone, progress, results)
+  - Responsive design para novos componentes
+
+---
+
+## 📋 PRÓXIMOS PASSOS SUGERIDOS
+
+### Curto Prazo
+1. Testar extração de faturas com diferentes comercializadores
+2. Adicionar validação mais robusta dos dados extraídos
+3. Implementar cache de resultados de extração
+
+### Médio Prazo
+1. Exportação PDF dos resultados
+2. Testes unitários com Jest/Vitest
+3. Modularização do código em ES6 modules
+
+### Longo Prazo
+1. Suporte multi-idioma (i18n)
+2. Widget incorporável para sites externos
+3. Comparação histórica de preços
 
 ---
 

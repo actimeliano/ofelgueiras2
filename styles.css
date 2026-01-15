@@ -1458,3 +1458,338 @@ body.no-rounded .fixed-tlr {
 [data-theme="dark"] .input-error-message {
   color: #EF9A9A;
 }
+
+/* ============================================================
+   USER PROFILES
+   ============================================================ */
+.profiles-container {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.profiles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.profiles-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.profiles-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.profile-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.profile-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-item.active {
+  border-color: var(--color-primary);
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-details {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.profile-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.profile-actions button {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-xs);
+}
+
+.btn-save-profile {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.btn-save-profile:hover {
+  background: var(--color-primary-dark);
+}
+
+/* ============================================================
+   ANNUAL SAVINGS CALCULATOR
+   ============================================================ */
+.savings-display {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+}
+
+.savings-display.savings-positive {
+  border-left: 4px solid var(--color-success);
+}
+
+.savings-display.savings-negative {
+  border-left: 4px solid var(--color-warning);
+}
+
+.savings-header {
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.savings-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.savings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.savings-row:last-child {
+  border-bottom: none;
+}
+
+.savings-row.savings-total {
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  padding: var(--space-sm) 0;
+  border-top: 2px solid var(--border-color);
+  border-bottom: none;
+  margin-top: var(--space-sm);
+}
+
+.savings-positive .savings-total span:last-child {
+  color: var(--color-success);
+}
+
+.savings-negative .savings-total span:last-child {
+  color: var(--color-warning);
+}
+
+/* ============================================================
+   INVOICE UPLOAD
+   ============================================================ */
+.invoice-upload-container {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.invoice-upload-header h3 {
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--text-primary);
+}
+
+.invoice-upload-description {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+}
+
+.invoice-upload-dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--bg-card-alt);
+}
+
+.invoice-upload-dropzone:hover,
+.invoice-upload-dropzone.dragover {
+  border-color: var(--color-primary);
+  background: rgba(46, 125, 50, 0.05);
+}
+
+.dropzone-content svg {
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.dropzone-content p {
+  margin: var(--space-xs) 0;
+  color: var(--text-secondary);
+}
+
+.upload-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.upload-formats {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.invoice-upload-status {
+  margin-top: var(--space-md);
+  text-align: center;
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+.upload-progress .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.invoice-upload-result {
+  margin-top: var(--space-md);
+}
+
+.upload-success {
+  padding: var(--space-md);
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+}
+
+.upload-success p {
+  margin: var(--space-xs) 0;
+  color: var(--text-primary);
+}
+
+.upload-error {
+  padding: var(--space-md);
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+}
+
+.upload-error p {
+  margin: var(--space-xs) 0;
+  color: var(--text-primary);
+}
+
+.invoice-api-config {
+  margin-top: var(--space-md);
+}
+
+.invoice-api-config details {
+  background: var(--bg-card-alt);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+.invoice-api-config summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: var(--space-xs);
+}
+
+.api-config-form {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.api-config-form label {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.api-config-form input {
+  padding: var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+}
+
+.api-config-note {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.api-config-note a {
+  color: var(--color-primary);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 480px) {
+  .savings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+  
+  .invoice-upload-dropzone {
+    padding: var(--space-lg);
+  }
+  
+  .profile-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+  
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
