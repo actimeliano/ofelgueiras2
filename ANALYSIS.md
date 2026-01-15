@@ -533,5 +533,74 @@ const i18n = {
 
 ---
 
+## 📊 ATUALIZAÇÃO DE DADOS 2026
+
+### Tarifas de Acesso às Redes (TAR) 2026
+A ERSE estabeleceu um aumento médio de 3,5% nas TAR para BTN em 2026.
+
+| Componente | Período | Valor 2026 (€/kWh) |
+|------------|---------|-------------------|
+| Simples | - | 0,0654 |
+| Bi-Horário | Fora de Vazio | 0,0895 |
+| Bi-Horário | Vazio | 0,0198 |
+| Tri-Horário | Ponta | 0,2142 |
+| Tri-Horário | Cheias | 0,0683 |
+| Tri-Horário | Vazio | 0,0198 |
+
+### Mercado Regulado (SU Eletricidade) 2026
+Preço de referência para tarifa simples: **0,1654 €/kWh**
+
+| Potência | Termo Potência (€/dia) | Energia Simples (€/kWh) |
+|----------|------------------------|------------------------|
+| 3.45 kVA | 0,1865 | 0,1654 |
+| 4.60 kVA | 0,2446 | 0,1654 |
+| 5.75 kVA | 0,3055 | 0,1654 |
+| 6.90 kVA | 0,3648 | 0,1654 |
+| 10.35 kVA | 0,5397 | 0,1654 |
+| 13.80 kVA | 0,7136 | 0,1654 |
+| 17.25 kVA | 0,8875 | 0,1654 |
+| 20.70 kVA | 1,0614 | 0,1654 |
+
+### Principais Comercializadores 2026 (Destaques)
+
+#### Goldenergy ACP (Melhor para baixo consumo)
+- Potência 6.9 kVA: **0,3614 €/dia**
+- Energia: **0,1499 €/kWh**
+- Vantagem: Termo de potência muito competitivo
+
+#### Endesa Digital Luz (Melhor para alto consumo)
+- Potência 6.9 kVA: **0,7041 €/dia**
+- Energia: **0,1291 €/kWh**
+- Vantagem: Preço kWh mais baixo do mercado fixo
+
+#### EDP Digital 2026
+- Potência 6.9 kVA: **0,5801 €/dia**
+- Energia: **0,1424 €/kWh**
+- Vantagem: Bom equilíbrio para 3.45 kVA
+
+#### Plenitude Tarifa Fácil
+- Potência 6.9 kVA: **0,5435 €/dia**
+- Energia: **0,1410 €/kWh**
+- Vantagem: All-rounder equilibrado
+
+#### G9 Energy Vantagem+
+- Potência 6.9 kVA: **0,4498 €/dia**
+- Energia: **0,1348 €/kWh**
+- Vantagem: Outsider muito competitivo
+
+### Mercado Indexado 2026
+Previsão OMIE para 2026: **53-60 €/MWh** (0,053-0,060 €/kWh)
+
+| Comercializador | Potência 6.9 kVA (€/dia) |
+|-----------------|-------------------------|
+| Luzboa | 0,4374 |
+| Ibelectra | 0,2616 (muito competitivo) |
+| Coopérnico | 0,3418 |
+
+### Ficheiro de Dados Criado
+- **SimuladorEletricidade_OF_MN_2026.csv** - Contém todos os dados atualizados para 2026
+
+---
+
 *Documento atualizado em Janeiro 2026*
 
