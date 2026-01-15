@@ -6,9 +6,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
         <!-- 2) Título e descrição -->
-        <title>Comparador de Tarifários 2025</title>
+        <title>Comparador de Tarifários</title>
         <meta name="description"
-              content="Comparador de tarifários de eletricidade 2025: calcula em segundos o custo mensal consoante potência contratada, consumo e descontos sociais.">
+              content="Comparador de tarifários de eletricidade: calcula em segundos o custo mensal consoante potência contratada, consumo e descontos sociais.">
       
         <!-- 3) CSS principal -->
         <link rel="stylesheet" href="styles.css">
@@ -34,7 +34,13 @@
         </script>
       </head>
 <body>
-    <h1 class="dynamic-title">Comparador de Tarifários 2025</h1>
+    <h1 class="dynamic-title">Comparador de Tarifários <span id="yearDisplay"></span></h1>
+    
+    <!-- Data error message (hidden by default) -->
+    <div id="dataErrorMessage" class="data-error-message" style="display: none;"></div>
+    
+    <!-- Data freshness indicator -->
+    <div id="dataFreshnessIndicator" class="data-freshness-indicator" style="display: none;"></div>
 
 
     <div class="parent">
@@ -209,11 +215,11 @@
         <div class="div5 hidden" id="dateRangeFields">
             <div class="date-cell form-group">
                 <label for="startDate">Data Início</label>
-                <input type="date" id="startDate" class="form-control" min="2025-01-01" max="2025-12-31" />
+                <input type="date" id="startDate" class="form-control" />
             </div>
             <div class="date-cell form-group">
                 <label for="endDate">Data Fim</label>
-                <input type="date" id="endDate" class="form-control" min="2025-01-01" max="2025-12-31" />
+                <input type="date" id="endDate" class="form-control" />
             </div>
         </div>
         
@@ -490,7 +496,7 @@
             <div style="margin-top: 10px;">
                 <img src="favicon-32x32.png" alt="Ícone de Óscar Felgueiras"
                     style="width: 32px; height: 32px; border-radius: 50%; vertical-align: middle;">
-                <span style="margin-left: 8px;">© 2025 Óscar Felgueiras</span>
+                <span style="margin-left: 8px;">© <span id="copyrightYear"></span> Óscar Felgueiras</span>
             </div>
         </div>
     </div>   

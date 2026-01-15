@@ -1,11 +1,9 @@
 name: Run R Script and Commit CSV
 
 on:
-#  schedule:
-#    - cron: '0-59/10 12 * * *'  # De 13:00 até 13:59 (de 10 em 10 minutos)
-#    - cron: '0-59/10 13 * * *'   # De 14:00 até 14:30 (de 10 em 10 minutos)
-#    - cron: '0-59/10 19 * * *'  # De 19:00 até 19:59 (de 10 em 10 minutos)
-#    - cron: '0-30/10 20 * * *'   # De 20:00 até 20:30 (de 10 em 10 minutos)
+  schedule:
+    - cron: '0 12 * * *'   # Diariamente às 12:00 UTC (13:00 Portugal)
+    - cron: '0 18 * * *'   # Diariamente às 18:00 UTC (19:00 Portugal)
   workflow_dispatch:  # Permite execução manual
 
 jobs:
@@ -84,7 +82,7 @@ jobs:
 
       - name: Check if CSV file exists
         run: |
-          if [ ! -f "gs/SimuladorEletricidade_OF_MN_2025_2.csv" ]; then
+          if [ ! -f "gs/SimuladorEletricidade_OF_MN_2026.csv" ]; then
             echo "::error::CSV file does not exist. Skipping commit."
             exit 1
           fi
@@ -93,6 +91,6 @@ jobs:
       - name: Commit new file
         uses: EndBug/add-and-commit@v9
         with:
-          add: "gs/SimuladorEletricidade_OF_MN_2025_2.csv"
-          message: "Adiciona novo arquivo gerado pelo workflow"
+          add: "gs/SimuladorEletricidade_OF_MN_2026.csv"
+          message: "Atualiza dados do simulador automaticamente"
           github_token: ${{ secrets.PAT_TOKEN }}
