@@ -9,6 +9,17 @@
         <title>Comparador de Tarifários</title>
         <meta name="description"
               content="Comparador de tarifários de eletricidade: calcula em segundos o custo mensal consoante potência contratada, consumo e descontos sociais.">
+        
+        <!-- Open Graph meta tags -->
+        <meta property="og:title" content="Comparador de Tarifários de Eletricidade">
+        <meta property="og:description" content="Compare tarifários de eletricidade em Portugal e encontre a opção mais económica.">
+        <meta property="og:type" content="website">
+        <meta property="og:image" content="android-chrome-512x512.png">
+        
+        <!-- Additional SEO -->
+        <meta name="keywords" content="eletricidade, tarifários, comparador, Portugal, energia, luz, EDP, Galp, Endesa">
+        <meta name="author" content="Óscar Felgueiras">
+        <meta name="robots" content="index, follow">
       
         <!-- 3) CSS principal -->
         <link rel="stylesheet" href="styles.css">
@@ -34,6 +45,9 @@
         </script>
       </head>
 <body>
+    <!-- Skip link for accessibility -->
+    <a href="#resultado" class="skip-link">Ir para resultados</a>
+    
     <h1 class="dynamic-title">Comparador de Tarifários <span id="yearDisplay"></span></h1>
     
     <!-- Data error message (hidden by default) -->
@@ -416,9 +430,9 @@
         
         
         
-        <div id="resultado"></div>
+        <div id="resultado" role="region" aria-label="Resultados da comparação de tarifários" aria-live="polite"></div>
         
-        <div id="listaTarifarios"></div>
+        <div id="listaTarifarios" role="list" aria-label="Lista de tarifários"></div>
         
         
         
@@ -456,7 +470,7 @@
               title="OMIE e Projeção"
               width="800"
               height="450"
-              <!-- loading="lazy"-->
+              loading="lazy"
               style="border:none; position:absolute; inset:0;"
             ></iframe>
         </div>
@@ -476,20 +490,15 @@
             <!-- teu conteúdo de rodapé -->
             <div>
                 <a href="https://www.youtube.com/@oscarfelgueiras8837" target="_blank"
-                    style="text-decoration: none; margin-right: 15px;">
-                    <img src="YouTube_full-color_icon.png" alt="YouTube"
-                    width="36"
-                    height="25"
-                    style="height:25px; width:36px;">
+                    style="text-decoration: none; margin-right: 15px;" aria-label="Canal do YouTube de Óscar Felgueiras">
+                    <svg width="36" height="25" viewBox="0 0 48 48" aria-hidden="true" style="vertical-align: middle;">
+                        <use href="icons.svg#youtube-logo"></use>
+                    </svg>
                 </a>
-                <a href="https://x.com/ofelgueiras2" target="_blank" style="text-decoration: none; display: inline-block; overflow: hidden;">
-                    <img
-                      src="X_icon_2.svg"
-                      width="25"
-                      height="25"
-                      alt="X (Twitter)"
-                      style="border-radius: 4px; display: block;"
-                    >
+                <a href="https://x.com/ofelgueiras2" target="_blank" style="text-decoration: none; display: inline-block; overflow: hidden;" aria-label="Perfil X (Twitter) de Óscar Felgueiras">
+                    <svg width="25" height="25" viewBox="0 0 50 50" aria-hidden="true" style="border-radius: 4px; display: block;">
+                        <use href="icons.svg#x-logo"></use>
+                    </svg>
                   </a>
                   
             </div>

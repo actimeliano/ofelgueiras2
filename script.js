@@ -2,6 +2,16 @@
 // CONFIGURATION
 // ============================================================
 
+/**
+ * Comparador de Tarifários de Eletricidade
+ * 
+ * Este script calcula e compara tarifários de eletricidade em Portugal,
+ * incluindo taxas, impostos e descontos sociais.
+ * 
+ * @author Óscar Felgueiras
+ * @version 2.0
+ */
+
 // Debug mode - set to false in production to disable debugLog
 const DEBUG_MODE = false;
 
@@ -20,7 +30,7 @@ let dataLoadError = null;
 // Debug logging utility
 function debugLog(...args) {
     if (DEBUG_MODE) {
-        debugLog(...args);
+        console.log(...args);
     }
 }
 
@@ -419,38 +429,74 @@ function obterVariavel(nome) {
 }
 
 
-async function carregarCSV(url) {
-    try {
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            throw new Error(`Erro ao carregar dados: ${resp.status} ${resp.statusText}`);
+/**
+ * Carrega e processa um ficheiro CSV
+ * @param {string} url - URL do ficheiro CSV
+ * @param {number} maxRetries - Número máximo de tentativas (default: 3)
+ * @returns {Promise<Array>} Dados do CSV processados
+ */
+async function carregarCSV(url, maxRetries = 3) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            debugLog(`📡 Tentativa ${attempt}/${maxRetries} de carregar: ${url}`);
+            
+            const resp = await fetch(url, {
+                cache: 'no-cache', // Evita cache desatualizado
+                headers: {
+                    'Accept': 'text/csv, text/plain, */*'
+                }
+            });
+            
+            if (!resp.ok) {
+                throw new Error(`Erro ao carregar dados: ${resp.status} ${resp.statusText}`);
+            }
+            
+            const txt = await resp.text();
+            
+            // Validar que recebemos conteúdo
+            if (!txt || txt.trim().length === 0) {
+                throw new Error('Ficheiro CSV vazio ou inválido');
+            }
+            
+            // Track data freshness from Last-Modified header if available
+            const lastModified = resp.headers.get('Last-Modified');
+            if (lastModified) {
+                dataLastUpdated = new Date(lastModified);
+            } else {
+                dataLastUpdated = new Date();
+            }
+            
+            dataLoadError = null;
+            hideDataError();
+            
+            return txt.split("\n").map(l =>
+                l.split(";").map(v => {
+                    v = v.trim();
+                    if (v.match(/^-?\d+,\d+$/)) return parseFloat(v.replace(",", "."));
+                    if (v.match(/^-?\d+$/)) return parseInt(v);
+                    return v;
+                })
+            );
+        } catch (error) {
+            lastError = error;
+            debugLog(`❌ Erro na tentativa ${attempt}:`, error.message);
+            
+            // Aguardar antes de nova tentativa (exponential backoff)
+            if (attempt < maxRetries) {
+                const waitTime = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+                debugLog(`⏳ Aguardando ${waitTime}ms antes de nova tentativa...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
         }
-        const txt = await resp.text();
-        
-        // Track data freshness from Last-Modified header if available
-        const lastModified = resp.headers.get('Last-Modified');
-        if (lastModified) {
-            dataLastUpdated = new Date(lastModified);
-        } else {
-            dataLastUpdated = new Date();
-        }
-        
-        dataLoadError = null;
-        
-        return txt.split("\n").map(l =>
-            l.split(";").map(v => {
-                v = v.trim();
-                if (v.match(/^-?\d+,\d+$/)) return parseFloat(v.replace(",", "."));
-                if (v.match(/^-?\d+$/)) return parseInt(v);
-                return v;
-            })
-        );
-    } catch (error) {
-        dataLoadError = error.message;
-        debugLog("❌ Erro ao carregar CSV:", error);
-        showDataError(error.message);
-        return [];
     }
+    
+    // Todas as tentativas falharam
+    dataLoadError = lastError?.message || 'Erro desconhecido';
+    debugLog("❌ Todas as tentativas falharam:", dataLoadError);
+    showDataError(`Erro ao carregar dados após ${maxRetries} tentativas. Por favor, recarregue a página.`);
+    return [];
 }
 
 // Show error message to user
