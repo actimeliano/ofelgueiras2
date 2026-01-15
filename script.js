@@ -1,3 +1,33 @@
+// ============================================================
+// CONFIGURATION
+// ============================================================
+
+// Debug mode - set to false in production to disable debugLog
+const DEBUG_MODE = false;
+
+// Dynamic year configuration
+const CURRENT_YEAR = new Date().getFullYear();
+const DATA_YEAR = CURRENT_YEAR; // Year for date constraints
+
+// Date range configuration
+const DATE_MIN = `${DATA_YEAR}-01-01`;
+const DATE_MAX = `${DATA_YEAR}-12-31`;
+
+// Data freshness tracking
+let dataLastUpdated = null;
+let dataLoadError = null;
+
+// Debug logging utility
+function debugLog(...args) {
+    if (DEBUG_MODE) {
+        debugLog(...args);
+    }
+}
+
+// ============================================================
+// CSV PATHS AND DATA
+// ============================================================
+
 // ✅ NOVO: caminhos para os dois ficheiros separados
 const urlCSV_basico = "gs/Simulador_basico.csv";
 const urlCSV_grande = "gs/Simulador_grande.csv";
@@ -270,11 +300,11 @@ function expandirNotacaoCientifica(str) {
 }
 
 // — testes rápidos —
-console.log(expandirNotacaoCientifica("123e-5"));  // → "0.00123"
-console.log(expandirNotacaoCientifica("1,23E-2")); // → "0.0123"
-console.log(expandirNotacaoCientifica("5E+4"));    // → "50000"
-console.log(expandirNotacaoCientifica("3.14"));    // → "3.14"   (não havendo “e”)
-console.log(expandirNotacaoCientifica("abc"));     // → "abc"    (não numérico)
+debugLog(expandirNotacaoCientifica("123e-5"));  // → "0.00123"
+debugLog(expandirNotacaoCientifica("1,23E-2")); // → "0.0123"
+debugLog(expandirNotacaoCientifica("5E+4"));    // → "50000"
+debugLog(expandirNotacaoCientifica("3.14"));    // → "3.14"   (não havendo “e”)
+debugLog(expandirNotacaoCientifica("abc"));     // → "abc"    (não numérico)
 
 
 let OMIESSelecionadoS;
@@ -342,7 +372,7 @@ function converterReferencia(ref) {
 
     colIndex -= 1; // Ajuste para índice zero-based
 
-    console.log(`🔍 Conversão: ${ref} → Linha ${row}, Coluna ${colIndex}`);
+    debugLog(`🔍 Conversão: ${ref} → Linha ${row}, Coluna ${colIndex}`);
     return { col: colIndex, row };
 }
 
@@ -363,7 +393,7 @@ function obterTabela(nome) {
         return extrair(dadosCSV_basico, tabelasBasicas[nome]);
     } else if (tabelasGrandes[nome]) {
         if (adiarGrandes) {
-            console.log(`⏳ Tabela grande '${nome}' ainda não carregada.`);
+            debugLog(`⏳ Tabela grande '${nome}' ainda não carregada.`);
             return "⌛ Adiado";
         }
         return extrair(dadosCSV_grande, tabelasGrandes[nome]);
@@ -384,23 +414,71 @@ function obterVariavel(nome) {
     const { col, row } = converterReferencia(variaveis[nome]);
     const valor = dadosCSV_basico[row]?.[col] || "Indefinido";
 
-    console.log(`🔎 Teste variável ${nome}:`, valor);
+    debugLog(`🔎 Teste variável ${nome}:`, valor);
     return valor;
 }
 
 
 async function carregarCSV(url) {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Erro ${resp.status}`);
-    const txt = await resp.text();
-    return txt.split("\n").map(l =>
-        l.split(";").map(v => {
-            v = v.trim();
-            if (v.match(/^-?\d+,\d+$/)) return parseFloat(v.replace(",", "."));
-            if (v.match(/^-?\d+$/)) return parseInt(v);
-            return v;
-        })
-    );
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            throw new Error(`Erro ao carregar dados: ${resp.status} ${resp.statusText}`);
+        }
+        const txt = await resp.text();
+        
+        // Track data freshness from Last-Modified header if available
+        const lastModified = resp.headers.get('Last-Modified');
+        if (lastModified) {
+            dataLastUpdated = new Date(lastModified);
+        } else {
+            dataLastUpdated = new Date();
+        }
+        
+        dataLoadError = null;
+        
+        return txt.split("\n").map(l =>
+            l.split(";").map(v => {
+                v = v.trim();
+                if (v.match(/^-?\d+,\d+$/)) return parseFloat(v.replace(",", "."));
+                if (v.match(/^-?\d+$/)) return parseInt(v);
+                return v;
+            })
+        );
+    } catch (error) {
+        dataLoadError = error.message;
+        debugLog("❌ Erro ao carregar CSV:", error);
+        showDataError(error.message);
+        return [];
+    }
+}
+
+// Show error message to user
+function showDataError(message) {
+    const errorDiv = document.getElementById("dataErrorMessage");
+    if (errorDiv) {
+        errorDiv.textContent = `⚠️ ${message}`;
+        errorDiv.style.display = "block";
+    }
+}
+
+// Hide error message
+function hideDataError() {
+    const errorDiv = document.getElementById("dataErrorMessage");
+    if (errorDiv) {
+        errorDiv.style.display = "none";
+    }
+}
+
+// Update data freshness indicator
+function updateDataFreshnessIndicator() {
+    const indicator = document.getElementById("dataFreshnessIndicator");
+    if (indicator && dataLastUpdated) {
+        const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const formattedDate = dataLastUpdated.toLocaleDateString('pt-PT', options);
+        indicator.textContent = `Dados atualizados: ${formattedDate}`;
+        indicator.style.display = "block";
+    }
 }
 
 function trimZeros(value, decimals = 2) {
@@ -409,8 +487,8 @@ function trimZeros(value, decimals = 2) {
   }
   
 
-console.log("🔍 Testando extração de tabelas...");
-console.log("📌 Tabela kVAs:", obterTabela("kVAs"));
+debugLog("🔍 Testando extração de tabelas...");
+debugLog("📌 Tabela kVAs:", obterTabela("kVAs"));
 
 function preencherSelecaoMeses() {
     const meses = obterTabela("Meses")?.flat() || [];
@@ -426,7 +504,7 @@ function preencherSelecaoMeses() {
     if (meses[mesAtualIndex]) {
         selectMes.value = mesAtualIndex;
     }
-    console.log(`🔎 Mês atual selecionado: ${meses[mesAtualIndex]}`);
+    debugLog(`🔎 Mês atual selecionado: ${meses[mesAtualIndex]}`);
 }
 
 function atualizarResultados() {
@@ -447,7 +525,7 @@ OMIESSelecionadoS = Number((omieNum / 1000).toFixed(5));
 // Se o seu input já está em €/kWh, basta usar:
  // OMIESSelecionadoS = omieNum; 
 
-console.log("└─ OMIESSelecionadoS (no início de atualizarResultados):", OMIESSelecionadoS);
+debugLog("└─ OMIESSelecionadoS (no início de atualizarResultados):", OMIESSelecionadoS);
 
 
 
@@ -470,7 +548,7 @@ if (rawConsumo === "") {
     const withComma = raw.replace('.', ',');                       // → "6,9"
     const potenciaSelecionada = withComma + ' kVA';                // → "6,9 kVA"
     //const idx = potenciasArray.indexOf(potenciaNum);
-    console.log("📌 Potência selecionada:",potenciaSelecionada);
+    debugLog("📌 Potência selecionada:",potenciaSelecionada);
 
     if (isNaN(consumo)) consumo = 0;
     if (!potenciaSelecionada) potenciaSelecionada = "6,9 kVA";
@@ -488,9 +566,9 @@ if (rawConsumo === "") {
     const tarPotSraw = tarPot[idx];            // ex: "0,3174 €"
     const tarPotSnum = parseEuro(tarPotSraw);
 
-    console.log("📌 Potência selecionada, idx:",potenciaSelecionada,idx,raw);
-    console.log("🔍 Conteúdo de potencias:", potencias);   
-    console.log("🔍 Conteúdo de TARpotencias:", tarPot,tarPotSnum);
+    debugLog("📌 Potência selecionada, idx:",potenciaSelecionada,idx,raw);
+    debugLog("🔍 Conteúdo de potencias:", potencias);   
+    debugLog("🔍 Conteúdo de TARpotencias:", tarPot,tarPotSnum);
     
     // lê as duas tabelas (coluna única com strings “X,XXXX €”)
     const rawPotTS = obterTabela("descKVAsTarSocial")?.map(r => r[0]) || [];
@@ -503,17 +581,17 @@ if (rawConsumo === "") {
     const descontoPotTS = parseEuro(rawDescontoPotTS);  // €/dia de potência
     const descontoKwhTS  = parseEuro(rawDescontoKwh);  // €/kWh de consumo
 
-    console.log("Desconto potência TS:", descontoPotTS);
-    console.log("Desconto kWh TS:", descontoKwhTS);
+    debugLog("Desconto potência TS:", descontoPotTS);
+    debugLog("Desconto kWh TS:", descontoKwhTS);
 
     const nomesTarifarios = obterTabela("empresasSimples")?.flat().map(nome => nome.replace(/\*+$/, "").trim()) || [];
     const nomesTarifariosDetalhados = obterTabela("detalheTarifarios")?.flat().map(nome => nome.replace(/\*+$/, "").trim()) || [];
-    console.log("Tabela detalheTarifarios:", nomesTarifariosDetalhados);
+    debugLog("Tabela detalheTarifarios:", nomesTarifariosDetalhados);
     const tarifariosDados = obterTabela("preçosSimples");
     const OMIES = obterTabela("OMIE");
     const PerdasS = obterTabela("Perdas");
     const kVAsTarSocialS = obterTabela("kVAsTarSocial")?.map(row => row[0]) || [];
-    console.log("🔎 OMIES:", OMIES);
+    debugLog("🔎 OMIES:", OMIES);
     
     if (!potencias.length || !nomesTarifarios.length || !tarifariosDados.length) {
         console.error("Erro ao carregar tarifários.");
@@ -547,8 +625,8 @@ if (rawConsumo === "") {
     // só vale 1 se o checkbox estiver marcado e a potência for ≤ 6.9
     const famFlag = (famCheckbox.checked && potenciaNum <= 6.9) ? 1 : 0;
 
-    console.log("Aplicar desconto tarifa social?", tsFlag);
-    console.log("Aplicar desconto famílias numerosas?", famFlag);
+    debugLog("Aplicar desconto tarifa social?", tsFlag);
+    debugLog("Aplicar desconto famílias numerosas?", famFlag);
 
     const diasMesesTabela = obterTabela("diasMeses")?.flat() || [];
     const strDiasTabela = obterTabela("strDias")?.flat() || [];
@@ -570,7 +648,7 @@ if (rawConsumo === "") {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0
         });
-        console.log(`🔎 DataS = true: diasS calculado = ${diasS}`);
+        debugLog(`🔎 DataS = true: diasS calculado = ${diasS}`);
       } else {
         console.warn("❗ Datas inválidas mesmo com DataS true — fallback para mês selecionado.");
         diasS = parseFloat(diasMesesTabela[mesSelecionadoIndex]) || 30;
@@ -593,11 +671,11 @@ if (rawConsumo === "") {
         strDiasSimples = String(strDiasTabela[mesSelecionadoIndex]).replace('.', ',') || "30";
       }
     
-      console.log(`🔎 DataS = false: diasS = ${diasS}`);
+      debugLog(`🔎 DataS = false: diasS = ${diasS}`);
     }
     
 
-    console.log(`✅ diasS final: ${diasS}, strDiasSimples: ${strDiasSimples}`);
+    debugLog(`✅ diasS final: ${diasS}, strDiasSimples: ${strDiasSimples}`);
     
     let IVABaseSimples = parsePercent(obterVariavel("IVABase"));
     let AudiovisualS = parseEuro(obterVariavel("Audiovisual"));
@@ -607,7 +685,7 @@ if (rawConsumo === "") {
     let DGEGS = parseEuro(obterVariavel("DGEG"));
     let IESS = parseEuro(obterVariavel("IES")) * (1 - tsFlag);
 
-    console.log(`✅ IEC: ${IESS}`);
+    debugLog(`✅ IEC: ${IESS}`);
     let IVA_AudiovisualSimples = parsePercent(obterVariavel("IVA_Audiovisual"));
     let IVA_DGEGSimples        = parsePercent(obterVariavel("IVA_DGEG"));
     let IVA_IESS               = parsePercent(obterVariavel("IVA_IES"));
@@ -689,8 +767,8 @@ if (rawConsumo === "") {
             : (PerdasS[mesSelecionadoIndex]?.[0] || 0);
     }
 
-    console.log("🔎 OMIESSelecionadoS atualizado:", OMIESSelecionadoS);
-    console.log("🔎 PerdasSelecionadoS atualizado:", PerdasSelecionadoS);
+    debugLog("🔎 OMIESSelecionadoS atualizado:", OMIESSelecionadoS);
+    debugLog("🔎 PerdasSelecionadoS atualizado:", PerdasSelecionadoS);
 
     let U3;
     let PerfilS = "";
@@ -740,7 +818,7 @@ if (rawConsumo === "") {
         PerfilM_S = "";
     }
 
-    console.log("🔎 PerfilM_S:", PerfilM_S);
+    debugLog("🔎 PerfilM_S:", PerfilM_S);
 
 
     const colIndex = potencias.indexOf(potenciaSelecionada);
@@ -766,15 +844,15 @@ if (rawConsumo === "") {
       );
     
     let IVAFixoS;
-    console.log("Potência, IVA, TS:", potenciaSelecionada, IVAFixoS, kVAsTarSocialS)
+    debugLog("Potência, IVA, TS:", potenciaSelecionada, IVAFixoS, kVAsTarSocialS)
     if (kVAsTarSocialS.includes(potenciaSelecionada)) {
         IVAFixoS = IVAPromocionalS;
     } else {
         IVAFixoS = IVABaseSimples;
     }
-    console.log("IVAFixoS:", IVAFixoS)
+    debugLog("IVAFixoS:", IVAFixoS)
 
-    console.log("OMIE:", OMIESSelecionadoS)
+    debugLog("OMIE:", OMIESSelecionadoS)
     // const omieInput = document.getElementById("omieInput");
 
 
@@ -811,8 +889,8 @@ if (!isNaN(omieParseado)) {
 }
 
 
-//    console.log("OMIE:", OMIESSelecionadoS, omieInputValue, DataS)
-    console.log("potenciaNum:", potenciaNum)
+//    debugLog("OMIE:", OMIESSelecionadoS, omieInputValue, DataS)
+    debugLog("potenciaNum:", potenciaNum)
 
     // --- Criação do array de tarifários a partir dos dados CSV ---
     // MODIFICAÇÃO 1: Marcação dos tarifários indexados (empresas entre C19 e C25)
@@ -1017,7 +1095,7 @@ if (!isNaN(omieParseado)) {
               simples = parseFloat((base + TARSimplesS).toFixed(4));
             }
           
-            console.log("Plenitude indexado:", simples);
+            debugLog("Plenitude indexado:", simples);
         } else {                            
             simples = parseFloat(tarifariosDados[i]?.[colSimples]) || 0;
         }
@@ -1035,8 +1113,8 @@ if (!isNaN(omieParseado)) {
    }
 
         const nomeExibido = mostrarNomesAlternativos && nomesTarifariosDetalhados[i] ? nomesTarifariosDetalhados[i] : nome;
-        console.log("Potência, IVA, TS:", potenciaSelecionada, IVAFixoS, kVAsTarSocialS)
-        console.log("Potência, IVA, TS:", potenciaSelecionada, potenciaNum)
+        debugLog("Potência, IVA, TS:", potenciaSelecionada, IVAFixoS, kVAsTarSocialS)
+        debugLog("Potência, IVA, TS:", potenciaSelecionada, potenciaNum)
 
         // —> IVA de 6% para potência <= 3,45 kVA
         //if (potenciaNum <= 3.45) {
@@ -1182,13 +1260,13 @@ if (!isNaN(omieParseado)) {
                 simples: simplesMeu,
                 custo: parseFloat(custoMeu.toFixed(2))
             };
-            console.log("Inserindo Meu tarifário:", meuTarifario);
+            debugLog("Inserindo Meu tarifário:", meuTarifario);
             tarifarios.push(meuTarifario);
         } else {
             console.error("Erro ao converter os valores dos inputs de 'Meu tarifário' para número.");
         }
     } else {
-        console.log("Inputs de 'Meu tarifário' não preenchidos.");
+        debugLog("Inputs de 'Meu tarifário' não preenchidos.");
     }
 
    
@@ -1449,7 +1527,7 @@ if (!isNaN(omieParseado)) {
             // Apenas para “EDP indexado” criamos a tooltipText e a classe
             let cellAttrs = ' class="internop"';
             if ((tarifa.nome === "EDP indexado" || tarifa.nome.startsWith("EDP: Eletricidade Indexada")) && incluirEDP && potenciaNum >=3.45) {
-                const descontoMsg = "Valor apresentado inclui desconto mensal de 10€ válido nos primeiros 10 meses, para adesões até 30/9/2026";
+                const descontoMsg = `Valor apresentado inclui desconto mensal de 10€ válido nos primeiros 10 meses, para adesões até 30/9/${CURRENT_YEAR}`;
                 const tooltipText = descontoMsg;
                 cellAttrs = ` class="internop has-tooltip mais-indicator" data-tippy-content="${tooltipText}"`;        
             }
@@ -2074,6 +2152,35 @@ function revealPostTableContent() {
 // --------------------------------------------------
 // 6) Toda inicialização em um só lugar
 document.addEventListener("DOMContentLoaded", async () => {
+  // ============================================================
+  // DYNAMIC YEAR INITIALIZATION
+  // ============================================================
+  
+  // Set dynamic year in title and copyright
+  const yearDisplay = document.getElementById("yearDisplay");
+  const copyrightYear = document.getElementById("copyrightYear");
+  if (yearDisplay) yearDisplay.textContent = CURRENT_YEAR;
+  if (copyrightYear) copyrightYear.textContent = CURRENT_YEAR;
+  
+  // Update page title with year
+  document.title = `Comparador de Tarifários ${CURRENT_YEAR}`;
+  
+  // Set date input constraints dynamically
+  const startDateInput = document.getElementById("startDate");
+  const endDateInput = document.getElementById("endDate");
+  if (startDateInput) {
+    startDateInput.min = DATE_MIN;
+    startDateInput.max = DATE_MAX;
+  }
+  if (endDateInput) {
+    endDateInput.min = DATE_MIN;
+    endDateInput.max = DATE_MAX;
+  }
+  
+  // ============================================================
+  // REFERENCES
+  // ============================================================
+  
   // referências principais
   const btnDias         = document.getElementById("btnDias");
   const div3            = document.querySelector(".div3");
@@ -2326,7 +2433,7 @@ wrappers.forEach(wrapper => {
       diasInput.disabled      = DataS;
       // 3️⃣ REAJUSTA O INTERVALO sempre que DataS mudar
   REPEAT_INTERVAL = DataS ? 5 : 25;
-  console.log(`🔄 REPEAT_INTERVAL agora é ${REPEAT_INTERVAL} ms (DataS = ${DataS})`);
+  debugLog(`🔄 REPEAT_INTERVAL agora é ${REPEAT_INTERVAL} ms (DataS = ${DataS})`);
     }
 
   // estado para o botão Dias
@@ -2335,9 +2442,19 @@ wrappers.forEach(wrapper => {
       estadoTsAberto = false;
 
   // 1) Carregar CSV, aplicar esquema e popular meses
-  console.log("🔄 Iniciando carregamento do CSV...");
+  debugLog("🔄 Iniciando carregamento do CSV...");
   dadosCSV_basico = await carregarCSV(urlCSV_basico);
-  console.log("✅ CSV básico carregado");
+  
+  // Check if data loaded successfully
+  if (dadosCSV_basico.length === 0) {
+    debugLog("❌ Falha ao carregar dados básicos");
+    // Show error but continue - allow app to render
+  } else {
+    debugLog("✅ CSV básico carregado");
+    hideDataError();
+    updateDataFreshnessIndicator();
+  }
+  
   aplicarEsquema(esquemaAtual);
   preencherSelecaoMeses();
   document.getElementById("incluirACP").checked = false;
@@ -2355,10 +2472,10 @@ wrappers.forEach(wrapper => {
       document.getElementById("omieInput").value = "";
       startDate.value = endDate.value = "";
       // 2) Restaura os limites originais
-      startDate.min = "2026-01-01";
-      startDate.max = "2026-12-31";
-      endDate.min = "2026-01-01";
-      endDate.max = "2026-12-31";
+      startDate.min = DATE_MIN;
+      startDate.max = DATE_MAX;
+      endDate.min = DATE_MIN;
+      endDate.max = DATE_MAX;
       resetDescontosSociais();
       atualizarEstadoDatas();
       atualizarResultados();
@@ -2370,10 +2487,10 @@ wrappers.forEach(wrapper => {
   btnClearDates.addEventListener("click", () => {
       startDate.value = endDate.value = "";
       // 2) Restaura os limites originais
-      startDate.min = "2026-01-01";
-      startDate.max = "2026-12-31";
-      endDate.min = "2026-01-01";
-      endDate.max = "2026-12-31";
+      startDate.min = DATE_MIN;
+      startDate.max = DATE_MAX;
+      endDate.min = DATE_MIN;
+      endDate.max = DATE_MAX;
       atualizarEstadoDatas();
       atualizarResultados();
   });
@@ -2428,8 +2545,8 @@ wrappers.forEach(wrapper => {
   // 6) Botão Definições
   // espera que o DOM esteja pronto
 
-  console.log("btnDef:", btnDef);
-console.log("secaoDef:", secaoDef);
+  debugLog("btnDef:", btnDef);
+debugLog("secaoDef:", secaoDef);
 
 
 
@@ -2437,7 +2554,7 @@ console.log("secaoDef:", secaoDef);
   // Função de callback comum para startDate
   function onStartDateChange() {
       // ajustar min do endDate
-      endDate.min = startDate.value || "2026-01-01";
+      endDate.min = startDate.value || DATE_MIN;
       atualizarEstadoDatas();
       atualizarResultados();
   }
@@ -2445,7 +2562,7 @@ console.log("secaoDef:", secaoDef);
   // Função de callback comum para endDate
   function onEndDateChange() {
       // ajustar max do startDate
-      startDate.max = endDate.value || "2026-12-31";
+      startDate.max = endDate.value || DATE_MAX;
       atualizarEstadoDatas();
       atualizarResultados();
   }
@@ -2528,7 +2645,7 @@ console.log("secaoDef:", secaoDef);
   setTimeout(async () => {
       dadosCSV_grande = await carregarCSV(urlCSV_grande);
       adiarGrandes = false;
-      console.log("✅ CSV grande carregado em background");
+      debugLog("✅ CSV grande carregado em background");
   }, 1000); // Aguarda 1 segundo para não interferir com o carregamento inicial
 
   tippy.delegate(document.body, {
