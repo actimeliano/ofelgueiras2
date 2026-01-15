@@ -425,6 +425,840 @@ function restoreFromHistory(snapshot) {
 }
 
 // ============================================================
+// USER PROFILES & PREFERENCES
+// ============================================================
+
+const PROFILES_KEY = 'comparador_profiles';
+const CURRENT_PROFILE_KEY = 'comparador_current_profile';
+const MAX_PROFILES = 5;
+
+/**
+ * Default profile structure
+ */
+const DEFAULT_PROFILE = {
+    name: 'Perfil Padrão',
+    consumo: '250',
+    potencia: '6.9',
+    incluirACP: false,
+    incluirContinente: false,
+    incluirMeo: false,
+    incluirEDP: false,
+    restringir: false,
+    mostrarNomes: false,
+    tarifaSocial: 'none',
+    familiasNumerosas: false,
+    meuTarifario: {
+        fixo: '',
+        variavel: ''
+    },
+    currentTariff: null // For annual savings calculation
+};
+
+/**
+ * Get all saved profiles
+ * @returns {Array} Array of user profiles
+ */
+function getProfiles() {
+    try {
+        const stored = localStorage.getItem(PROFILES_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        debugLog('❌ Failed to read profiles:', error);
+        return [];
+    }
+}
+
+/**
+ * Save a new profile or update existing
+ * @param {Object} profile - The profile to save
+ * @returns {Object|null} The saved profile or null on error
+ */
+function saveProfile(profile) {
+    try {
+        const profiles = getProfiles();
+        const existingIndex = profiles.findIndex(p => p.id === profile.id);
+        
+        const profileToSave = {
+            ...DEFAULT_PROFILE,
+            ...profile,
+            id: profile.id || Date.now(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        if (existingIndex >= 0) {
+            profiles[existingIndex] = profileToSave;
+        } else {
+            if (profiles.length >= MAX_PROFILES) {
+                debugLog('⚠️ Maximum profiles reached, removing oldest');
+                profiles.pop();
+            }
+            profiles.unshift(profileToSave);
+        }
+        
+        localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+        debugLog('👤 Profile saved:', profileToSave.name);
+        
+        return profileToSave;
+    } catch (error) {
+        debugLog('❌ Failed to save profile:', error);
+        return null;
+    }
+}
+
+/**
+ * Delete a profile by ID
+ * @param {number} profileId - The profile ID to delete
+ * @returns {boolean} Success status
+ */
+function deleteProfile(profileId) {
+    try {
+        const profiles = getProfiles();
+        const filtered = profiles.filter(p => p.id !== profileId);
+        localStorage.setItem(PROFILES_KEY, JSON.stringify(filtered));
+        debugLog('🗑️ Profile deleted:', profileId);
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to delete profile:', error);
+        return false;
+    }
+}
+
+/**
+ * Create a profile from current form state
+ * @param {string} name - The profile name
+ * @returns {Object} The profile object
+ */
+function createProfileFromCurrentState(name = 'Novo Perfil') {
+    const consumoInput = document.getElementById('consumoInput');
+    const potenciaSelect = document.getElementById('potenciac');
+    const fixoInput = document.getElementById('fixo');
+    const variavelInput = document.getElementById('variavel');
+    
+    // Get tarifa social selection
+    let tarifaSocial = 'none';
+    if (document.getElementById('tsTS')?.checked) tarifaSocial = 'ts';
+    if (document.getElementById('tsPartial')?.checked) tarifaSocial = 'ts-partial';
+    
+    return {
+        name: name,
+        consumo: consumoInput?.value || '250',
+        potencia: potenciaSelect?.value || '6.9',
+        incluirACP: document.getElementById('incluirACP')?.checked || false,
+        incluirContinente: document.getElementById('incluirContinente')?.checked || false,
+        incluirMeo: document.getElementById('incluirMeo')?.checked || false,
+        incluirEDP: document.getElementById('incluirEDP')?.checked || false,
+        restringir: document.getElementById('restringir')?.checked || false,
+        mostrarNomes: document.getElementById('mostrarNomes')?.checked || false,
+        tarifaSocial: tarifaSocial,
+        familiasNumerosas: document.getElementById('familiasNumerosas')?.checked || false,
+        meuTarifario: {
+            fixo: fixoInput?.value || '',
+            variavel: variavelInput?.value || ''
+        }
+    };
+}
+
+/**
+ * Load a profile into the form
+ * @param {Object} profile - The profile to load
+ * @returns {boolean} Success status
+ */
+function loadProfile(profile) {
+    try {
+        const consumoInput = document.getElementById('consumoInput');
+        const potenciaSelect = document.getElementById('potenciac');
+        const fixoInput = document.getElementById('fixo');
+        const variavelInput = document.getElementById('variavel');
+        
+        if (consumoInput) consumoInput.value = profile.consumo || '250';
+        if (potenciaSelect) potenciaSelect.value = profile.potencia || '6.9';
+        
+        // Load checkboxes
+        const checkboxMapping = {
+            'incluirACP': profile.incluirACP,
+            'incluirContinente': profile.incluirContinente,
+            'incluirMeo': profile.incluirMeo,
+            'incluirEDP': profile.incluirEDP,
+            'restringir': profile.restringir,
+            'mostrarNomes': profile.mostrarNomes,
+            'familiasNumerosas': profile.familiasNumerosas
+        };
+        
+        for (const [id, value] of Object.entries(checkboxMapping)) {
+            const el = document.getElementById(id);
+            if (el) el.checked = value || false;
+        }
+        
+        // Load tarifa social
+        const tsNone = document.getElementById('tsNone');
+        const tsTS = document.getElementById('tsTS');
+        const tsPartial = document.getElementById('tsPartial');
+        
+        if (profile.tarifaSocial === 'ts' && tsTS) tsTS.checked = true;
+        else if (profile.tarifaSocial === 'ts-partial' && tsPartial) tsPartial.checked = true;
+        else if (tsNone) tsNone.checked = true;
+        
+        // Load meu tarifário
+        if (profile.meuTarifario) {
+            if (fixoInput) fixoInput.value = profile.meuTarifario.fixo || '';
+            if (variavelInput) variavelInput.value = profile.meuTarifario.variavel || '';
+        }
+        
+        // Save as current profile
+        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+        
+        debugLog('👤 Profile loaded:', profile.name);
+        
+        // Trigger recalculation
+        if (typeof atualizarResultados === 'function') {
+            atualizarResultados();
+        }
+        
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to load profile:', error);
+        return false;
+    }
+}
+
+/**
+ * Get the currently active profile
+ * @returns {Object|null} The current profile or null
+ */
+function getCurrentProfile() {
+    try {
+        const stored = localStorage.getItem(CURRENT_PROFILE_KEY);
+        return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+        debugLog('❌ Failed to get current profile:', error);
+        return null;
+    }
+}
+
+/**
+ * Render the profiles list in the UI
+ */
+function renderProfilesList() {
+    const container = document.getElementById('profilesList');
+    if (!container) return;
+    
+    const profiles = getProfiles();
+    const currentProfile = getCurrentProfile();
+    
+    if (profiles.length === 0) {
+        container.innerHTML = `
+            <p style="color: var(--text-muted); font-size: 14px; text-align: center;">
+                Nenhum perfil guardado. Clique em "Guardar Atual" para criar um.
+            </p>
+        `;
+        return;
+    }
+    
+    container.innerHTML = profiles.map(profile => `
+        <div class="profile-item ${currentProfile?.id === profile.id ? 'active' : ''}" data-profile-id="${profile.id}">
+            <div class="profile-info">
+                <div class="profile-name">${profile.name}</div>
+                <div class="profile-details">
+                    Consumo: ${profile.consumo} kWh | Potência: ${profile.potencia} kVA
+                    ${profile.meuTarifario?.fixo ? ' | Meu tarifário definido' : ''}
+                </div>
+            </div>
+            <div class="profile-actions">
+                <button type="button" class="btn-load-profile" data-profile-id="${profile.id}" title="Carregar perfil">
+                    📥 Carregar
+                </button>
+                <button type="button" class="btn-delete-profile" data-profile-id="${profile.id}" title="Apagar perfil">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add event listeners
+    container.querySelectorAll('.btn-load-profile').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const profileId = parseInt(e.target.dataset.profileId);
+            const profile = profiles.find(p => p.id === profileId);
+            if (profile) {
+                loadProfile(profile);
+                renderProfilesList(); // Re-render to update active state
+            }
+        });
+    });
+    
+    container.querySelectorAll('.btn-delete-profile').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const profileId = parseInt(e.target.dataset.profileId);
+            if (confirm('Tem a certeza que deseja apagar este perfil?')) {
+                deleteProfile(profileId);
+                renderProfilesList();
+            }
+        });
+    });
+}
+
+/**
+ * Update current profile's current tariff (for savings calculation)
+ * @param {Object} tariffInfo - Information about the user's current tariff
+ */
+function setCurrentTariff(tariffInfo) {
+    try {
+        const currentProfile = getCurrentProfile();
+        if (currentProfile) {
+            currentProfile.currentTariff = tariffInfo;
+            localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(currentProfile));
+            debugLog('💰 Current tariff set:', tariffInfo);
+        }
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to set current tariff:', error);
+        return false;
+    }
+}
+
+// ============================================================
+// ANNUAL SAVINGS CALCULATOR
+// ============================================================
+
+/**
+ * Calculate annual savings between two tariffs
+ * @param {Object} currentTariff - Current tariff with potencia (€/day) and energia (€/kWh)
+ * @param {Object} newTariff - New tariff to compare
+ * @param {number} consumoMensal - Monthly consumption in kWh
+ * @param {number} diasMes - Average days per month (default 30.44)
+ * @returns {Object} Savings calculation results
+ */
+function calculateAnnualSavings(currentTariff, newTariff, consumoMensal, diasMes = 30.44) {
+    const mesesAno = 12;
+    const diasAno = 365;
+    
+    // Current tariff annual cost
+    const custoAtualPotencia = currentTariff.potencia * diasAno;
+    const custoAtualEnergia = currentTariff.energia * consumoMensal * mesesAno;
+    const custoAtualAnual = custoAtualPotencia + custoAtualEnergia;
+    
+    // New tariff annual cost
+    const custoNovoPotencia = newTariff.potencia * diasAno;
+    const custoNovoEnergia = newTariff.energia * consumoMensal * mesesAno;
+    const custoNovoAnual = custoNovoPotencia + custoNovoEnergia;
+    
+    // Savings
+    const poupancaAnual = custoAtualAnual - custoNovoAnual;
+    const poupancaMensal = poupancaAnual / mesesAno;
+    const percentagemPoupanca = custoAtualAnual > 0 
+        ? ((poupancaAnual / custoAtualAnual) * 100) 
+        : 0;
+    
+    return {
+        custoAtual: {
+            mensal: custoAtualAnual / mesesAno,
+            anual: custoAtualAnual,
+            potencia: custoAtualPotencia,
+            energia: custoAtualEnergia
+        },
+        custoNovo: {
+            mensal: custoNovoAnual / mesesAno,
+            anual: custoNovoAnual,
+            potencia: custoNovoPotencia,
+            energia: custoNovoEnergia
+        },
+        poupanca: {
+            mensal: poupancaMensal,
+            anual: poupancaAnual,
+            percentagem: percentagemPoupanca
+        },
+        isPoupanca: poupancaAnual > 0
+    };
+}
+
+/**
+ * Calculate savings comparing current profile's tariff with best available
+ * @param {Array} tarifarios - Array of available tariffs (sorted by cost)
+ * @param {number} consumo - Monthly consumption in kWh
+ * @param {number} dias - Days in billing period
+ * @returns {Object|null} Savings comparison or null if no current tariff set
+ */
+function calculateSavingsFromCurrentTariff(tarifarios, consumo, dias) {
+    const currentProfile = getCurrentProfile();
+    
+    if (!currentProfile?.currentTariff && !currentProfile?.meuTarifario?.fixo) {
+        debugLog('⚠️ No current tariff set for savings calculation');
+        return null;
+    }
+    
+    // Use either explicitly set current tariff or "meu tarifário" values
+    const currentTariff = currentProfile.currentTariff || {
+        nome: 'Meu Tarifário Atual',
+        potencia: parseFloat(currentProfile.meuTarifario?.fixo?.replace(',', '.')) || 0,
+        energia: parseFloat(currentProfile.meuTarifario?.variavel?.replace(',', '.')) || 0
+    };
+    
+    if (!currentTariff.potencia && !currentTariff.energia) {
+        return null;
+    }
+    
+    // Get the best tariff (first in sorted array)
+    const bestTariff = tarifarios[0];
+    if (!bestTariff) return null;
+    
+    // Calculate savings
+    const savings = calculateAnnualSavings(
+        { potencia: currentTariff.potencia, energia: currentTariff.energia },
+        { potencia: bestTariff.potencia, energia: bestTariff.simples },
+        consumo
+    );
+    
+    return {
+        ...savings,
+        currentTariffName: currentTariff.nome || 'Meu Tarifário',
+        bestTariffName: bestTariff.nome,
+        bestTariff: bestTariff
+    };
+}
+
+/**
+ * Format savings for display
+ * @param {Object} savings - Savings calculation result
+ * @returns {string} HTML formatted savings display
+ */
+function formatSavingsDisplay(savings) {
+    if (!savings) return '';
+    
+    const sign = savings.isPoupanca ? '' : '+';
+    const colorClass = savings.isPoupanca ? 'savings-positive' : 'savings-negative';
+    const icon = savings.isPoupanca ? '💰' : '⚠️';
+    
+    return `
+        <div class="savings-display ${colorClass}">
+            <div class="savings-header">
+                ${icon} Comparação com "${savings.currentTariffName}"
+            </div>
+            <div class="savings-body">
+                <div class="savings-row">
+                    <span>Custo atual estimado (anual):</span>
+                    <span>${formatDecimal(savings.custoAtual.anual, 2)} €</span>
+                </div>
+                <div class="savings-row">
+                    <span>Custo com "${savings.bestTariffName}" (anual):</span>
+                    <span>${formatDecimal(savings.custoNovo.anual, 2)} €</span>
+                </div>
+                <div class="savings-row savings-total">
+                    <span>${savings.isPoupanca ? 'Poupança' : 'Custo adicional'} anual:</span>
+                    <span>${sign}${formatDecimal(Math.abs(savings.poupanca.anual), 2)} € (${formatDecimal(Math.abs(savings.poupanca.percentagem), 1)}%)</span>
+                </div>
+                <div class="savings-row">
+                    <span>${savings.isPoupanca ? 'Poupança' : 'Custo adicional'} mensal:</span>
+                    <span>${sign}${formatDecimal(Math.abs(savings.poupanca.mensal), 2)} €</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================
+// INVOICE UPLOAD & PROCESSING (Gemini Flash API)
+// ============================================================
+
+const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+/**
+ * Invoice processing state
+ */
+let invoiceProcessingState = {
+    isProcessing: false,
+    lastResult: null,
+    apiKey: null // Should be set by user or environment
+};
+
+/**
+ * Set the Gemini API key
+ * @param {string} apiKey - The API key for Gemini
+ */
+function setGeminiApiKey(apiKey) {
+    invoiceProcessingState.apiKey = apiKey;
+    // Store encrypted or in session only for security
+    sessionStorage.setItem('gemini_api_key_set', 'true');
+    debugLog('🔑 Gemini API key configured');
+}
+
+/**
+ * Check if Gemini API is configured
+ * @returns {boolean} Whether API is ready
+ */
+function isGeminiConfigured() {
+    return !!invoiceProcessingState.apiKey;
+}
+
+/**
+ * Convert file to base64
+ * @param {File} file - The file to convert
+ * @returns {Promise<string>} Base64 encoded string
+ */
+async function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Extract invoice data using Gemini Flash API
+ * @param {File} file - The invoice image/PDF file
+ * @returns {Promise<Object>} Extracted invoice data
+ */
+async function extractInvoiceData(file) {
+    if (!isGeminiConfigured()) {
+        throw new Error('Gemini API key not configured. Please set your API key first.');
+    }
+    
+    if (invoiceProcessingState.isProcessing) {
+        throw new Error('Already processing an invoice. Please wait.');
+    }
+    
+    invoiceProcessingState.isProcessing = true;
+    
+    try {
+        const base64Data = await fileToBase64(file);
+        const mimeType = file.type || 'image/jpeg';
+        
+        const prompt = `Analisa esta fatura de eletricidade portuguesa e extrai os seguintes dados em formato JSON:
+{
+  "comercializador": "nome do comercializador/empresa",
+  "nomeTarifario": "nome do tarifário se visível",
+  "periodoFaturacao": {
+    "inicio": "YYYY-MM-DD",
+    "fim": "YYYY-MM-DD"
+  },
+  "potenciaContratada": {
+    "valor": número em kVA,
+    "unidade": "kVA"
+  },
+  "consumo": {
+    "total": número em kWh,
+    "ponta": número ou null,
+    "cheias": número ou null,
+    "vazio": número ou null,
+    "superVazio": número ou null
+  },
+  "precos": {
+    "potenciaDia": número em €/dia,
+    "energiaSimples": número em €/kWh ou null,
+    "energiaPonta": número em €/kWh ou null,
+    "energiaCheias": número em €/kWh ou null,
+    "energiaVazio": número em €/kWh ou null
+  },
+  "valores": {
+    "totalSemIVA": número,
+    "iva": número,
+    "totalComIVA": número
+  },
+  "tarifaSocial": boolean,
+  "tipoTarifa": "simples" ou "bi-horaria" ou "tri-horaria",
+  "confianca": número de 0 a 100 indicando confiança na extração
+}
+
+Se algum campo não for encontrado ou legível, usa null.
+Responde APENAS com o JSON, sem texto adicional.`;
+
+        const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${invoiceProcessingState.apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inline_data: {
+                                mime_type: mimeType,
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    topK: 32,
+                    topP: 1,
+                    maxOutputTokens: 2048
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!textContent) {
+            throw new Error('No response from Gemini API');
+        }
+        
+        // Parse JSON from response (handle potential markdown code blocks)
+        let jsonStr = textContent.trim();
+        if (jsonStr.startsWith('```json')) {
+            jsonStr = jsonStr.slice(7);
+        }
+        if (jsonStr.startsWith('```')) {
+            jsonStr = jsonStr.slice(3);
+        }
+        if (jsonStr.endsWith('```')) {
+            jsonStr = jsonStr.slice(0, -3);
+        }
+        
+        const extractedData = JSON.parse(jsonStr.trim());
+        
+        invoiceProcessingState.lastResult = {
+            data: extractedData,
+            timestamp: new Date().toISOString(),
+            fileName: file.name
+        };
+        
+        debugLog('📄 Invoice data extracted:', extractedData);
+        
+        return extractedData;
+        
+    } catch (error) {
+        debugLog('❌ Invoice extraction failed:', error);
+        throw error;
+    } finally {
+        invoiceProcessingState.isProcessing = false;
+    }
+}
+
+/**
+ * Apply extracted invoice data to the form
+ * @param {Object} invoiceData - The extracted invoice data
+ * @returns {boolean} Success status
+ */
+function applyInvoiceData(invoiceData) {
+    try {
+        // Apply potência
+        if (invoiceData.potenciaContratada?.valor) {
+            const potenciaSelect = document.getElementById('potenciac');
+            if (potenciaSelect) {
+                // Find closest matching option
+                const targetPotencia = invoiceData.potenciaContratada.valor;
+                const options = Array.from(potenciaSelect.options);
+                const closest = options.reduce((prev, curr) => {
+                    return Math.abs(parseFloat(curr.value) - targetPotencia) < 
+                           Math.abs(parseFloat(prev.value) - targetPotencia) ? curr : prev;
+                });
+                potenciaSelect.value = closest.value;
+            }
+        }
+        
+        // Apply consumo
+        if (invoiceData.consumo?.total) {
+            const consumoInput = document.getElementById('consumoInput');
+            if (consumoInput) {
+                consumoInput.value = invoiceData.consumo.total;
+            }
+        }
+        
+        // Apply "meu tarifário" with extracted prices
+        if (invoiceData.precos) {
+            const fixoInput = document.getElementById('fixo');
+            const variavelInput = document.getElementById('variavel');
+            
+            if (fixoInput && invoiceData.precos.potenciaDia) {
+                fixoInput.value = invoiceData.precos.potenciaDia.toFixed(4);
+            }
+            
+            if (variavelInput && invoiceData.precos.energiaSimples) {
+                variavelInput.value = invoiceData.precos.energiaSimples.toFixed(4);
+            }
+        }
+        
+        // Set tarifa social if detected
+        if (invoiceData.tarifaSocial) {
+            const tsTS = document.getElementById('tsTS');
+            if (tsTS) tsTS.checked = true;
+        }
+        
+        // Store as current tariff for savings calculation
+        if (invoiceData.precos?.potenciaDia || invoiceData.precos?.energiaSimples) {
+            setCurrentTariff({
+                nome: invoiceData.nomeTarifario || `${invoiceData.comercializador || 'Tarifário'} (da fatura)`,
+                potencia: invoiceData.precos.potenciaDia || 0,
+                energia: invoiceData.precos.energiaSimples || 
+                         invoiceData.precos.energiaPonta || 0
+            });
+        }
+        
+        debugLog('✅ Invoice data applied to form');
+        
+        // Trigger recalculation
+        if (typeof atualizarResultados === 'function') {
+            atualizarResultados();
+        }
+        
+        return true;
+    } catch (error) {
+        debugLog('❌ Failed to apply invoice data:', error);
+        return false;
+    }
+}
+
+/**
+ * Get last processed invoice result
+ * @returns {Object|null} Last invoice processing result
+ */
+function getLastInvoiceResult() {
+    return invoiceProcessingState.lastResult;
+}
+
+/**
+ * Create invoice upload UI component
+ * @returns {string} HTML for invoice upload component
+ */
+function createInvoiceUploadUI() {
+    return `
+        <div class="invoice-upload-container" id="invoiceUploadContainer">
+            <div class="invoice-upload-header">
+                <h3>📄 Carregar Fatura</h3>
+                <p class="invoice-upload-description">
+                    Carregue uma imagem ou PDF da sua fatura de eletricidade para preencher automaticamente os dados.
+                </p>
+            </div>
+            <div class="invoice-upload-dropzone" id="invoiceDropzone">
+                <input type="file" id="invoiceFileInput" accept="image/*,.pdf" hidden>
+                <div class="dropzone-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p>Arraste a fatura aqui ou <span class="upload-link">clique para selecionar</span></p>
+                    <p class="upload-formats">Formatos suportados: JPG, PNG, PDF</p>
+                </div>
+            </div>
+            <div class="invoice-upload-status" id="invoiceUploadStatus" style="display: none;">
+                <div class="upload-progress">
+                    <div class="spinner"></div>
+                    <span>A processar fatura...</span>
+                </div>
+            </div>
+            <div class="invoice-upload-result" id="invoiceUploadResult" style="display: none;"></div>
+            <div class="invoice-api-config" id="invoiceApiConfig">
+                <details>
+                    <summary>⚙️ Configurar API</summary>
+                    <div class="api-config-form">
+                        <label for="geminiApiKey">Chave API Gemini:</label>
+                        <input type="password" id="geminiApiKey" placeholder="Introduza a sua chave API">
+                        <button type="button" id="saveApiKey" class="btn-primary">Guardar</button>
+                        <p class="api-config-note">
+                            Obtenha uma chave API gratuita em 
+                            <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+                        </p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Initialize invoice upload functionality
+ * Called after DOM is ready
+ */
+function initInvoiceUpload() {
+    const dropzone = document.getElementById('invoiceDropzone');
+    const fileInput = document.getElementById('invoiceFileInput');
+    const statusEl = document.getElementById('invoiceUploadStatus');
+    const resultEl = document.getElementById('invoiceUploadResult');
+    const saveApiKeyBtn = document.getElementById('saveApiKey');
+    const apiKeyInput = document.getElementById('geminiApiKey');
+    
+    if (!dropzone || !fileInput) return;
+    
+    // Click to upload
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+    
+    dropzone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) await processInvoiceFile(file);
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) await processInvoiceFile(file);
+    });
+    
+    // API key save
+    if (saveApiKeyBtn && apiKeyInput) {
+        saveApiKeyBtn.addEventListener('click', () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (apiKey) {
+                setGeminiApiKey(apiKey);
+                apiKeyInput.value = '';
+                alert('Chave API guardada para esta sessão.');
+            }
+        });
+    }
+    
+    async function processInvoiceFile(file) {
+        if (!isGeminiConfigured()) {
+            alert('Por favor configure a chave API Gemini primeiro.');
+            return;
+        }
+        
+        statusEl.style.display = 'block';
+        resultEl.style.display = 'none';
+        
+        try {
+            const data = await extractInvoiceData(file);
+            applyInvoiceData(data);
+            
+            resultEl.innerHTML = `
+                <div class="upload-success">
+                    <strong>✅ Fatura processada com sucesso!</strong>
+                    <p>Comercializador: ${data.comercializador || 'N/A'}</p>
+                    <p>Consumo: ${data.consumo?.total || 'N/A'} kWh</p>
+                    <p>Potência: ${data.potenciaContratada?.valor || 'N/A'} kVA</p>
+                    <p>Confiança: ${data.confianca || 'N/A'}%</p>
+                </div>
+            `;
+            resultEl.style.display = 'block';
+        } catch (error) {
+            resultEl.innerHTML = `
+                <div class="upload-error">
+                    <strong>❌ Erro ao processar fatura</strong>
+                    <p>${error.message}</p>
+                </div>
+            `;
+            resultEl.style.display = 'block';
+        } finally {
+            statusEl.style.display = 'none';
+        }
+    }
+    
+    debugLog('📄 Invoice upload initialized');
+}
+
+// ============================================================
 // CSV PATHS AND DATA
 // ============================================================
 
@@ -2360,6 +3194,16 @@ const invoiceTooltip = `
                 custo: tarifarios[0].custo
             } : null;
             saveToHistory(snapshot);
+            
+            // Calculate and display annual savings if "meu tarifário" is set
+            const savingsResult = calculateSavingsFromCurrentTariff(tarifarios, consumo, diasS);
+            const savingsContainer = document.getElementById('savingsDisplay');
+            if (savingsResult && savingsContainer) {
+                savingsContainer.innerHTML = formatSavingsDisplay(savingsResult);
+                savingsContainer.style.display = 'block';
+            } else if (savingsContainer) {
+                savingsContainer.style.display = 'none';
+            }
         }
         
         // Agora que a tabela foi desenhada, o botão já existe — associar o evento!
@@ -2554,12 +3398,24 @@ document.getElementById("familiasNumerosas")
   
 
 function alternarAba(abaSelecionada) {
-    const abas = ["MeuTarifario", "OutrasOpcoes"];
+    const abas = ["MeuTarifario", "OutrasOpcoes", "Perfis", "Fatura"];
 
     abas.forEach(aba => {
-        document.getElementById("aba" + aba).classList.toggle("ativa", aba === abaSelecionada);
-        document.getElementById("conteudo" + aba).classList.toggle("ativa", aba === abaSelecionada);
+        const abaEl = document.getElementById("aba" + aba);
+        const conteudoEl = document.getElementById("conteudo" + aba);
+        if (abaEl) abaEl.classList.toggle("ativa", aba === abaSelecionada);
+        if (conteudoEl) conteudoEl.classList.toggle("ativa", aba === abaSelecionada);
     });
+    
+    // Initialize invoice upload when Fatura tab is first opened
+    if (abaSelecionada === "Fatura") {
+        initInvoiceUpload();
+    }
+    
+    // Render profiles list when Perfis tab is opened
+    if (abaSelecionada === "Perfis") {
+        renderProfilesList();
+    }
 }
 
 function revealPostTableContent() {
@@ -3136,7 +3992,22 @@ debugLog("secaoDef:", secaoDef);
   document.getElementById("abaMeuTarifario")
       .addEventListener("click", () => alternarAba("MeuTarifario"));
   document.getElementById("abaOutrasOpcoes")
-      .addEventListener("click", () => alternarAba("OutrasOpcoes"));
+      ?.addEventListener("click", () => alternarAba("OutrasOpcoes"));
+  document.getElementById("abaPerfis")
+      ?.addEventListener("click", () => alternarAba("Perfis"));
+  document.getElementById("abaFatura")
+      ?.addEventListener("click", () => alternarAba("Fatura"));
+  
+  // Initialize profile save button
+  document.getElementById("btnSaveProfile")?.addEventListener("click", () => {
+      const profileName = prompt("Nome do perfil:", `Perfil ${new Date().toLocaleDateString('pt-PT')}`);
+      if (profileName) {
+          const profile = createProfileFromCurrentState(profileName);
+          saveProfile(profile);
+          renderProfilesList();
+          alert(`Perfil "${profileName}" guardado com sucesso!`);
+      }
+  });
   
   // Large CSV is now loaded on demand when date range is used
   debugLog("📋 Large CSV will be loaded on demand when needed");

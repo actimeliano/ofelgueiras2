@@ -350,9 +350,11 @@
                     padding: 10px 50px 10px 10px;">
         
                 <!-- Abas lado a lado -->
-                <div style="display: flex;">
+                <div style="display: flex; flex-wrap: wrap; gap: 2px;">
                     <div id="abaMeuTarifario" class="aba ativa">Meu tarifário</div>
                     <div id="abaOutrasOpcoes" class="aba">Outras opções</div>
+                    <div id="abaPerfis" class="aba">👤 Perfis</div>
+                    <div id="abaFatura" class="aba">📄 Fatura</div>
                 </div>
         
                 <!-- Conteúdo Meu Tarifário -->
@@ -447,9 +449,75 @@
                         <input type="checkbox" id="incluirEDP" style="margin: 0; padding: 0; width: 16px; height: 16px;">
                         <label for="restringir" style="margin: 4px;">Incluir desconto mensal de 10€ no EDP indexado</label>
                     </div>
+                </div>
         
+                <!-- Conteúdo Perfis -->
+                <div id="conteudoPerfis" class="conteudo-aba">
+                    <div class="profiles-container">
+                        <div class="profiles-header">
+                            <span style="font-weight: 600;">Perfis Guardados</span>
+                            <button type="button" id="btnSaveProfile" class="btn-save-profile" title="Guardar perfil atual">
+                                💾 Guardar Atual
+                            </button>
+                        </div>
+                        <div id="profilesList" class="profiles-list">
+                            <p style="color: var(--text-muted); font-size: 14px; text-align: center;">
+                                Nenhum perfil guardado. Clique em "Guardar Atual" para criar um.
+                            </p>
+                        </div>
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
+                                💡 Os perfis guardam: consumo, potência, opções selecionadas e valores do "Meu tarifário".
+                                <br>Máximo de 5 perfis.
+                            </p>
+                        </div>
+                    </div>
+                </div>
         
-        
+                <!-- Conteúdo Fatura -->
+                <div id="conteudoFatura" class="conteudo-aba">
+                    <div class="invoice-upload-container" id="invoiceUploadContainer">
+                        <div class="invoice-upload-header">
+                            <h3 style="margin: 0 0 4px 0;">📄 Carregar Fatura</h3>
+                            <p class="invoice-upload-description">
+                                Carregue uma imagem ou PDF da sua fatura de eletricidade para preencher automaticamente os dados e calcular poupanças.
+                            </p>
+                        </div>
+                        <div class="invoice-upload-dropzone" id="invoiceDropzone">
+                            <input type="file" id="invoiceFileInput" accept="image/*,.pdf" hidden>
+                            <div class="dropzone-content">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <p>Arraste a fatura aqui ou <span class="upload-link">clique para selecionar</span></p>
+                                <p class="upload-formats">Formatos suportados: JPG, PNG, PDF</p>
+                            </div>
+                        </div>
+                        <div class="invoice-upload-status" id="invoiceUploadStatus" style="display: none;">
+                            <div class="upload-progress">
+                                <div class="spinner"></div>
+                                <span>A processar fatura com IA...</span>
+                            </div>
+                        </div>
+                        <div class="invoice-upload-result" id="invoiceUploadResult" style="display: none;"></div>
+                        <div class="invoice-api-config" id="invoiceApiConfig">
+                            <details>
+                                <summary>⚙️ Configurar API Gemini</summary>
+                                <div class="api-config-form">
+                                    <label for="geminiApiKey">Chave API Gemini Flash:</label>
+                                    <input type="password" id="geminiApiKey" class="form-control" placeholder="Introduza a sua chave API">
+                                    <button type="button" id="saveApiKey" class="btn-primary" style="padding: 8px 16px;">Guardar</button>
+                                    <p class="api-config-note">
+                                        Obtenha uma chave API gratuita em 
+                                        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+                                        A chave é guardada apenas nesta sessão.
+                                    </p>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
                 </div>
         
             </div>
@@ -460,6 +528,9 @@
         
         
         <div id="resultado" role="region" aria-label="Resultados da comparação de tarifários" aria-live="polite"></div>
+        
+        <!-- Annual Savings Display -->
+        <div id="savingsDisplay" style="display: none;" aria-live="polite"></div>
         
         <div id="listaTarifarios" role="list" aria-label="Lista de tarifários"></div>
         
